@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>AI 对话窗口</title>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: 40px auto; }
+        #messages { height: 400px; border: 1px solid #ddd; padding: 15px; overflow-y: scroll; margin-bottom: 20px; background-color: #f9f9f9; }
+        .user { color: #007bff; text-align: right; }
+        .ai { color: #28a745; text-align: left; }
+        p { margin: 5px 0; }
+        input[type="text"] { width: 80%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        button { padding: 10px 15px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>AI 对话</h1>
+    <p>管理后台: <a href="/admin.html">/admin.html</a></p>
+    <div id="messages"></div>
+    <div>
+        <input type="text" id="userInput" placeholder="输入您的问题...">
+        <button onclick="sendMessage()" id="sendButton">发送</button>
+    </div>
+
+    <script>
+        const messagesElement = document.getElementById('messages');
+        const userInput = document.getElementById('userInput');
+        const sendButton = document.getElementById('sendButton');
+
+        function displayMessage(sender, text, className) {
+            const p = document.createElement('p');
+            p.className = className;
+            p.innerHTML = `<b>${sender}:</b> ${text}`;
+            messagesElement.appendChild(p);
+            messagesElement.scrollTop = messagesElement.scrollHeight;
+        }
+
+        // 1. 加载欢迎语
+        async function loadWelcomeMessage() {
+            try {
+                // 调用 /api/admin 接口来获取欢迎语配置
+                const response = await fetch('/api/admin'); 
+                
+                if (response.ok) {
+                    // 如果已经登录过，或者配置了默认值，则显示欢迎语
+                    const config = await response.json();
+                    displayMessage('AI', config.welcomeMessage, 'ai'); 
+                } else {
+                    // 未登录或配置失败，显示通用提示
+                    displayMessage('AI', "欢迎！API 配置加载失败，请访问 /admin.html 配置。", 'ai');
+                }
+            } catch (e) {
+                displayMessage('AI', "欢迎语加载网络错误。", 'ai');
+            }
+        }
+
+        // 2. 发送对话消息
+        async function sendMessage() {
+            const message = userInput.value;
+            if (!message.trim()) return;
+
+            displayMessage('您', message, 'user');
+            userInput.value = '';
+            sendButton.disabled = true;
+
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    // 根据您的 AI 模型要求构造请求体
+                    body: JSON.stringify({
+                        contents: [{ role: "user", parts: [{ text: message }] }]
+                    }) 
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    // 假设 AI 模型返回类似 Gemini 的结构
+                    const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || "（AI响应解析失败）";
+                    displayMessage('AI', aiText, 'ai');
+                } else {
+                    // 尝试解析错误信息，如果失败则显示状态码
+                    const errorData = await response.json().catch(() => ({error: response.statusText})); 
+                    displayMessage('AI', `错误: ${response.status} - ${errorData.error || response.statusText}`, 'ai');
+                }
+            } catch (error) {
+                displayMessage('AI', `网络错误: 无法连接到服务器。`, 'ai');
+            } finally {
+                sendButton.disabled = false;
+            }
+        }
+
+        loadWelcomeMessage();
+    </script>
+</body>
+</html>
