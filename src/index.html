@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="light dark"> 
-    <title>AI 助手 5.2 (平滑置顶，带延迟修正)</title>
+    <title>AI 助手 5.3 (平滑置顶 + 偏移修正)</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2d000/svg' viewBox='0 0 100 100'><text y='-.1em' x='-.05em' font-size='90'>✨</text></svg>">
     <style>
         /* =================================================== */
@@ -132,7 +132,7 @@
         function renderMarkdown(text) {
             let htmlText = text;
             htmlText = htmlText.replace(/```(\w*)\n([\s\S]*?)```/g, function(match, lang, code) {
-                const escapedCode = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                const escapedCode = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '>gt;');
                 const language = lang ? `<span class="code-lang" style="font-size: 0.8em; color: var(--color-code-lang); display: block; margin-bottom: 5px;">${lang}</span>` : '';
                 return `<pre><code>${language}${escapedCode}</code></pre>`;
             });
@@ -248,7 +248,7 @@
             }
         }
 
-        // --- 核心功能函数：sendMessage (即时平滑置顶，带延迟修正) ---
+        // --- 核心功能函数：sendMessage (即时平滑置顶，带偏移修正) ---
         async function sendMessage() {
             const message = messageInput.value.trim();
             if (message === '') return;
@@ -269,12 +269,17 @@
             // 1. 捕获用户消息元素 (消息出现在底部)
             const userMessageDiv = appendMessage('user', message); 
             
-            // 【v5.2 修复】：引入 setTimeout，确保 DOM 稳定后再执行平滑置顶
+            // 【v5.3 修正】：设置临时滚动边距，创造 180px 偏移量
+            userMessageDiv.style.scrollMarginTop = '180px'; 
+            
+            // 【v5.2 修正】：引入 setTimeout，确保 DOM 稳定后再执行平滑置顶
             setTimeout(() => {
                 // 确保 chatBox 仍存在且可滚动
                 if (userMessageDiv && chatBox.scrollHeight > chatBox.clientHeight) {
                      userMessageDiv.scrollIntoView({ block: 'start', behavior: 'smooth' });
                 }
+                // 立即移除边距，避免影响页面布局
+                userMessageDiv.style.scrollMarginTop = ''; 
             }, 50); 
             
             messageInput.value = '';
