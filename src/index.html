@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="light dark"> 
-    <title>AI 助手 5.2 (原生平滑置顶)</title>
+    <title>AI 助手 5.8 (动画贯穿思考和打字)</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2d000/svg' viewBox='0 0 100 100'><text y='-.1em' x='-.05em' font-size='90'>✨</text></svg>">
     <style>
         /* =================================================== */
@@ -72,6 +72,7 @@
             0%, 100% { box-shadow: 0 0 0 0px rgba(var(--color-brand-blue-rgb), 0.5); }
             50% { box-shadow: 0 0 0 3px rgba(var(--color-brand-blue-rgb), 0.8); }
         }
+        /* V5.8：保持动画类定义 */
         .ai-thinking { border: 1px solid var(--color-brand-blue); box-sizing: border-box; animation: breathe-border 1.5s infinite ease-in-out; padding: 11px 17px; }
 
         /* --- Markdown 样式（保持不变） --- */
@@ -240,7 +241,7 @@
             }
         }
 
-        // --- 核心功能函数：sendMessage (原生平滑置顶尝试) ---
+        // --- 核心功能函数：sendMessage (动画贯穿思考和打字) ---
         async function sendMessage() {
             const message = messageInput.value.trim();
             if (message === '') return;
@@ -250,8 +251,9 @@
             if (currentAbortController) {
                 currentAbortController.abort(); 
                 currentAbortController = null;
-                const thinking = document.querySelector('.ai-thinking');
-                if (thinking) thinking.remove();
+                // 注意：旧的 aiThinkingMessage 已被合并到 aiMessageDiv 中，这里只需要检查旧的 thinking class
+                const oldThinking = document.querySelector('.ai-thinking');
+                if (oldThinking) oldThinking.remove(); 
                 appendMessage('system', '🔴 旧操作已中断。正在处理新请求...'); 
             }
             // ----------------------------------------
@@ -274,14 +276,14 @@
             currentAbortController = new AbortController();
             const signal = currentAbortController.signal;
 
-            // 3. 创建呼吸思考框
-            const aiThinkingMessage = document.createElement('div');
-            aiThinkingMessage.classList.add('message', 'ai-message', 'ai-thinking'); 
-            chatBox.appendChild(aiThinkingMessage);
+            // 3. 【V5.8 修正】：创建**单个**元素用于思考和最终回复，并添加动画类
+            const aiMessageDiv = document.createElement('div');
+            aiMessageDiv.classList.add('message', 'ai-message', 'ai-thinking'); // <-- V5.8: 动画类从这里开始
+            chatBox.appendChild(aiMessageDiv);
             
             // 确保思考中消息在置顶操作完成后，视觉效果更平滑
             setTimeout(() => {
-                aiThinkingMessage.textContent = '思考中...'; 
+                aiMessageDiv.textContent = '思考中...'; 
             }, 100);
 
             try {
@@ -295,34 +297,38 @@
                 });
 
                 if (signal.aborted) {
+                    aiMessageDiv.remove(); // 被中断，直接移除
                     return; 
                 }
                 
                 const data = await response.json();
                 
-                aiThinkingMessage.remove(); 
+                // V5.8：无需移除 aiThinkingMessage，我们复用它
 
                 if (response.ok) {
                     const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || '抱歉，AI 返回了空响应。';
                     
-                    const aiMessageDiv = document.createElement('div');
-                    aiMessageDiv.classList.add('message', 'ai-message');
-                    chatBox.appendChild(aiMessageDiv);
-                    
+                    // 复用 aiMessageDiv 开始打字
                     await startTyping(aiMessageDiv, aiText); 
+                    
+                    // V5.8：打字完成后，移除动画类
+                    aiMessageDiv.classList.remove('ai-thinking');
                     
                 } else {
                     const errorMessage = data.error ? `AI 接口错误：${data.error.message || data.error}` : `请求失败，状态码：${response.status}`;
-                    appendMessage('system', `AI 助手：${errorMessage}`);
+                    
+                    // 显示错误信息，并移除动画类
+                    aiMessageDiv.innerHTML = appendMessage('system', errorMessage).outerHTML; // 用 system 消息格式显示错误
+                    aiMessageDiv.classList.remove('ai-thinking');
                 }
 
             } catch (error) {
-                aiThinkingMessage.remove(); 
-                if (error.name === 'AbortError') {
-                    return;
+                // 网络连接失败或其它错误，直接移除元素
+                if (error.name !== 'AbortError') {
+                    aiMessageDiv.remove(); // 移除思考框
+                    appendMessage('system', '网络连接失败，请检查您的网络。');
+                    console.error('Chat error:', error);
                 }
-                appendMessage('system', '网络连接失败，请检查您的网络。');
-                console.error('Chat error:', error);
             } finally {
                 currentAbortController = null; 
                 sendButton.disabled = false;
