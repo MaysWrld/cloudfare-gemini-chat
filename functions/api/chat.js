@@ -1,9 +1,33 @@
-// /functions/api/chat.js - 最终稳定且启用对话记忆版本 (无调试代码)
+// /functions/api/chat.js - 启用对话记忆版本 (内联 getConfig)
 
-import { getConfig } from '../auth'; 
+// const { getConfig } = require('../auth');  <-- 移除这个导入
 
-const HISTORY_TTL = 3600 * 24; // 历史记录有效期 24 小时 (秒)
+const HISTORY_TTL = 3600 * 24; 
 const SESSION_COOKIE_NAME = 'chat_session_id';
+const CONFIG_KEY = 'global_settings'; // 从 auth.js 复制的常量
+
+/**
+ * [内联] getConfig: 从 KV 存储中读取最新的配置。
+ */
+async function getConfig(env) {
+    const raw = await env.CONFIG.get(CONFIG_KEY); 
+
+    if (raw) {
+        try { 
+            return JSON.parse(raw); 
+        } catch (e) { 
+            console.error("Error parsing KV config:", e); 
+        }
+    }
+
+    // 返回默认配置
+    return {
+        apiUrl: 'https://api.example.com/v1/models/gemini-pro:generateContent', 
+        apiKey: 'YOUR_DEFAULT_AI_API_KEY', 
+        welcomeMessage: '欢迎使用 AI 助手！请访问管理后台配置 API 接口。',
+    };
+}
+
 
 /**
  * 从 Cookie 中获取或生成一个唯一的 Session ID，并设置 Set-Cookie 头部。
@@ -22,7 +46,6 @@ function getSessionData(request) {
     }
     
     if (!sessionId) {
-        // 使用兼容性 ID 生成方法
         sessionId = (Date.now() + Math.random()).toString(36).replace('.', '');
         
         const isSecure = request.url.startsWith('https://');
@@ -40,7 +63,7 @@ export async function onRequest({ request, env }) {
         return new Response('Method Not Allowed', { status: 405 });
     }
 
-    const config = await getConfig(env);
+    const config = await getConfig(env); // <-- 现在调用的是内联函数
     const { sessionId, setCookieHeader } = getSessionData(request);
 
     try {
@@ -86,7 +109,7 @@ export async function onRequest({ request, env }) {
                 await env.HISTORY.put(sessionId, JSON.stringify(history), { expirationTtl: HISTORY_TTL });
             }
             
-            // 8. 构造最终返回给客户端的响应对象 (成功路径)
+            // 8. 构造最终返回给客户端的响应对象
             const response = new Response(JSON.stringify(aiData), {
                 status: 200,
                 headers: { 'Content-Type': 'application/json' }
