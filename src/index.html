@@ -3,102 +3,223 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI 助手 3.0 (自适应)</title>
+    <meta name="color-scheme" content="light dark"> 
+    <title>AI 助手 3.0 (深色模式)</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='-.1em' x='-.05em' font-size='90'>✨</text></svg>">
     <style>
         /* =================================================== */
-        /* === 布局重构：实现全高自适应和键盘让位 === */
+        /* === 颜色变量定义：深浅模式切换的核心 === */
+        /* =================================================== */
+        :root {
+            /* Light Mode Variables */
+            --bg-main: #f0f4f9;
+            --bg-card: #ffffff;
+            --bg-input: #f8f9fa;
+            --text-main: #3c4043;
+            --text-header: #202124;
+            --border-main: #e8eaed;
+            --color-user: #e6f4ea;
+            --color-ai: #f1f3f4;
+            --color-system-bg: #fff2e0;
+            --color-system-text: #ea8600;
+            --color-code-bg: #e8e8e8;
+            --color-code-lang: #4285f4;
+            --color-focus-blue: #8ab4f8;
+            --color-brand-blue: #1a73e8;
+        }
+
+        /* 深色模式：根据设备设置覆盖颜色变量 */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-main: #121212;
+                --bg-card: #202020;
+                --bg-input: #303030;
+                --text-main: #e0e0e0;
+                --text-header: #f5f5f5;
+                --border-main: #444444;
+                --color-user: #3f4b5e; /* 暗蓝 */
+                --color-ai: #292929;
+                --color-system-bg: #4a3e2a; 
+                --color-system-text: #fcc203; 
+                --color-code-bg: #2d2d2d;
+                --color-code-lang: #79a6fe;
+                --color-focus-blue: #5b92e5;
+                --color-brand-blue: #5b92e5;
+            }
+        }
+        
+        /* =================================================== */
+        /* === 布局和基础样式：使用颜色变量 === */
         /* =================================================== */
         html, body {
-            height: 100%; /* 关键：让 body 占满整个视口 */
+            height: 100%; 
             margin: 0;
             padding: 0;
-            overflow: hidden; /* 防止键盘弹出时滚动条抖动 */
+            overflow: hidden; 
         }
         
         body {
             font-family: 'Google Sans', 'Roboto', Arial, sans-serif;
-            background-color: #f0f4f9; 
+            background-color: var(--bg-main); /* 使用变量 */
             display: flex;
             justify-content: center;
             align-items: center;
-            color: #3c4043; 
+            color: var(--text-main); /* 使用变量 */
         }
 
-        /* 聊天容器：占满 body 的全部高度和宽度 */
+        /* 聊天容器 */
         .chat-container {
             width: 100%; 
-            height: 100%; /* 关键：占满 body 100% 高度 */
-            max-width: 960px; /* 限制最大宽度，保持桌面版美观 */
-            background-color: #ffffff;
-            border-radius: 0; /* 移动端全屏显示，去掉圆角 */
-            box-shadow: 0 8px 24px rgba(60, 64, 67, 0.15); 
+            height: 100%; 
+            max-width: 960px; 
+            background-color: var(--bg-card); /* 使用变量 */
+            border-radius: 0; 
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2); 
             display: flex;
             flex-direction: column;
-            min-height: initial; /* 移除不必要的 min-height 限制 */
             overflow: hidden; 
+        }
+
+        /* 桌面视图优化 */
+        @media (min-width: 961px) {
+             .chat-container {
+                height: 90vh; 
+                border-radius: 28px;
+            }
         }
 
         /* 头部 */
         .header {
             padding: 16px 24px;
-            background-color: #ffffff; 
-            border-bottom: 1px solid #e8eaed; 
-            color: #202124; 
+            background-color: var(--bg-card); /* 使用变量 */
+            border-bottom: 1px solid var(--border-main); /* 使用变量 */
+            color: var(--text-header); /* 使用变量 */
             font-size: 1.5em; 
             font-weight: 500; 
             display: flex; 
             align-items: center;
             justify-content: space-between; 
-            flex-shrink: 0; /* 确保头部不被压缩 */
+            flex-shrink: 0; 
         }
 
-        /* 聊天消息显示区域：这是唯一允许拉伸的元素 */
+        /* 聊天消息显示区域 */
         .chat-box {
-            flex-grow: 1; /* 关键：占据所有剩余空间 */
+            flex-grow: 1; 
             padding: 20px 24px; 
-            overflow-y: auto; /* 确保消息列表可滚动 */
+            overflow-y: auto; 
             display: flex;
             flex-direction: column;
             gap: 16px; 
             scroll-behavior: smooth; 
         }
 
+        /* 消息气泡 */
+        .message {
+            padding: 12px 18px; 
+            border-radius: 20px; 
+            max-width: 80%; 
+            line-height: 1.6;
+            word-wrap: break-word;
+            font-size: 0.95em;
+        }
+        .user-message {
+            align-self: flex-end;
+            background-color: var(--color-user); /* 使用变量 */
+        }
+        .ai-message {
+            align-self: flex-start;
+            background-color: var(--color-ai); /* 使用变量 */
+        }
+        .system-message {
+            align-self: center;
+            background-color: var(--color-system-bg); /* 使用变量 */
+            color: var(--color-system-text); /* 使用变量 */
+            font-size: 0.85em;
+            text-align: center;
+            padding: 8px 12px;
+            border-radius: 12px;
+            max-width: 60%;
+        }
+
+        /* --- Markdown 样式增强 --- */
+        .ai-message pre {
+            background-color: var(--color-code-bg); /* 使用变量 */
+            padding: 10px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin-top: 10px;
+            font-family: Consolas, Monaco, 'Courier New', monospace;
+            font-size: 0.9em;
+            white-space: pre-wrap; 
+        }
+        .ai-message pre code {
+            display: block;
+            padding-left: 0;
+        }
+        .ai-message h2 {
+            font-size: 1.2em;
+            font-weight: 600;
+            margin-top: 15px;
+            margin-bottom: 5px;
+            color: var(--color-brand-blue); /* 使用变量 */
+        }
+        .ai-message ul {
+            padding-left: 20px;
+            margin-top: 5px;
+            margin-bottom: 5px;
+            list-style: disc;
+        }
+        .ai-message strong {
+            font-weight: 700;
+        }
+
         /* 输入区域样式 */
         .input-area {
             display: flex;
             padding: 16px 24px;
-            border-top: 1px solid #e8eaed; 
-            background-color: #ffffff; 
+            border-top: 1px solid var(--border-main); /* 使用变量 */
+            background-color: var(--bg-card); /* 使用变量 */
             align-items: center;
             gap: 10px; 
-            flex-shrink: 0; /* 确保输入框不被压缩 */
+            flex-shrink: 0; 
         }
-        
-        /* === 桌面视图优化 === */
-        @media (min-width: 961px) {
-             .chat-container {
-                height: 90vh; /* 桌面端仍可使用 vh 来获得更好的居中效果 */
-                border-radius: 28px;
-            }
+        #messageInput {
+            flex-grow: 1;
+            padding: 12px 18px;
+            border: 1px solid var(--border-main); /* 使用变量 */
+            border-radius: 24px; 
+            font-size: 1em;
+            outline: none; 
+            transition: border-color 0.2s, box-shadow 0.2s;
+            background-color: var(--bg-input); /* 使用变量 */
+            color: var(--text-main);
         }
-        /* =================================================== */
-        /* === 消息气泡和 Markdown 样式（保持不变） === */
-        /* =================================================== */
-        .message { padding: 12px 18px; border-radius: 20px; max-width: 80%; line-height: 1.6; word-wrap: break-word; font-size: 0.95em; color: #202124; }
-        .user-message { align-self: flex-end; background-color: #e6f4ea; }
-        .ai-message { align-self: flex-start; background-color: #f1f3f4; padding-bottom: 5px; }
-        .system-message { align-self: center; background-color: #fff2e0; color: #ea8600; font-size: 0.85em; text-align: center; padding: 8px 12px; border-radius: 12px; max-width: 60%; }
-        .ai-message pre { background-color: #e8e8e8; padding: 10px; border-radius: 8px; overflow-x: auto; margin-top: 10px; font-family: Consolas, Monaco, 'Courier New', monospace; font-size: 0.9em; white-space: pre-wrap; }
-        .ai-message pre code { display: block; padding-left: 0; }
-        .ai-message h2 { font-size: 1.2em; font-weight: 600; margin-top: 15px; margin-bottom: 5px; color: #1a73e8; }
-        .ai-message ul { padding-left: 20px; margin-top: 5px; margin-bottom: 5px; list-style: disc; }
-        .ai-message strong { font-weight: 700; }
-        #messageInput { flex-grow: 1; padding: 12px 18px; border: 1px solid #dadce0; border-radius: 24px; font-size: 1em; outline: none; transition: border-color 0.2s, box-shadow 0.2s; background-color: #f8f9fa; }
-        #messageInput:focus { border-color: #8ab4f8; box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.2); background-color: #ffffff; }
-        #sendButton { padding: 12px 20px; background-color: #1a73e8; color: white; border: none; border-radius: 24px; cursor: pointer; font-size: 1em; transition: background-color 0.3s, box-shadow 0.3s; display: flex; align-items: center; justify-content: center; }
-        #sendButton:hover { background-color: #1565c0; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); }
-        #sendButton:disabled { background-color: #dadce0; cursor: not-allowed; }
+        #messageInput:focus {
+            border-color: var(--color-focus-blue); /* 使用变量 */
+            box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.2); 
+            background-color: var(--bg-card); /* 使用变量 */
+        }
+        #sendButton {
+            padding: 12px 20px;
+            background-color: var(--color-brand-blue); /* 使用变量 */
+            color: white;
+            border: none;
+            border-radius: 24px; 
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.3s, box-shadow 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #sendButton:hover {
+            background-color: #1565c0; /* 保持hover色为固定深色 */
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        #sendButton:disabled {
+            background-color: #dadce0; 
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
@@ -126,7 +247,7 @@
 
             htmlText = htmlText.replace(/```(\w*)\n([\s\S]*?)```/g, function(match, lang, code) {
                 const escapedCode = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                const language = lang ? `<span class="code-lang" style="font-size: 0.8em; color: #4285f4; display: block; margin-bottom: 5px;">${lang}</span>` : '';
+                const language = lang ? `<span class="code-lang" style="font-size: 0.8em; color: var(--color-code-lang); display: block; margin-bottom: 5px;">${lang}</span>` : '';
                 return `<pre><code>${language}${escapedCode}</code></pre>`;
             });
 
