@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="light dark"> 
-    <title>AI 助手 3.5 (呼吸效应)</title>
+    <title>AI 助手 3.5 (打字机效果)</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='-.1em' x='-.05em' font-size='90'>✨</text></svg>">
     <style>
         /* =================================================== */
@@ -26,7 +26,7 @@
             --color-code-lang: #4285f4;
             --color-focus-blue: #8ab4f8;
             --color-brand-blue: #1a73e8;
-            --color-brand-blue-rgb: 26, 115, 232; /* 【新增】RGB 值用于动画 */
+            --color-brand-blue-rgb: 26, 115, 232; 
         }
 
         /* 深色模式：根据设备设置覆盖颜色变量 */
@@ -46,7 +46,7 @@
                 --color-code-lang: #79a6fe;
                 --color-focus-blue: #5b92e5;
                 --color-brand-blue: #5b92e5;
-                --color-brand-blue-rgb: 91, 146, 229; /* 【新增】RGB 值用于动画 */
+                --color-brand-blue-rgb: 91, 146, 229; 
             }
         }
         
@@ -147,7 +147,6 @@
         /* --- 3.5 新增：思考中对话框的呼吸动画效果 --- */
         @keyframes breathe-border {
             0%, 100% { 
-                /* 颜色使用 var(--color-brand-blue-rgb) */
                 box-shadow: 0 0 0 0px rgba(var(--color-brand-blue-rgb), 0.5); 
             }
             50% { 
@@ -156,11 +155,10 @@
         }
         
         .ai-thinking {
-            /* 确保边框可见，并应用动画 */
             border: 1px solid var(--color-brand-blue); 
             box-sizing: border-box;
             animation: breathe-border 1.5s infinite ease-in-out;
-            padding: 11px 17px; /* 调整 padding 以抵消边框和 box-shadow 占用的空间 */
+            padding: 11px 17px; 
         }
         /* --- End 3.5 Feature --- */
 
@@ -244,121 +242,11 @@
         function renderMarkdown(text) {
             let htmlText = text;
 
+            // 1. 替换代码块 (需在其他替换前完成)
             htmlText = htmlText.replace(/```(\w*)\n([\s\S]*?)```/g, function(match, lang, code) {
                 const escapedCode = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
                 const language = lang ? `<span class="code-lang" style="font-size: 0.8em; color: var(--color-code-lang); display: block; margin-bottom: 5px;">${lang}</span>` : '';
                 return `<pre><code>${language}${escapedCode}</code></pre>`;
             });
 
-            htmlText = htmlText.replace(/^## (.*$)/gim, '<h2>$1</h2>');
-            htmlText = htmlText.replace(/^\* (.*$)/gim, '<ul><li>$1</li></ul>');
-            htmlText = htmlText.replace(/<\/li>\n<ul>/gim, '</li>'); 
-            htmlText = htmlText.replace(/<\/ul>(\n<ul>)?/gim, '</ul>');
-            
-            htmlText = htmlText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-            htmlText = htmlText.replace(/\*(.*?)\*/g, '<em>$1</em>');
-            
-            return htmlText.replace(/\n/g, '<br>');
-        }
-
-        // --- 核心功能函数：appendMessage (保持不变) ---
-        function appendMessage(sender, text) {
-            const messageDiv = document.createElement('div');
-            messageDiv.classList.add('message');
-            
-            if (sender === 'user') {
-                messageDiv.classList.add('user-message');
-                messageDiv.textContent = text; 
-                
-            } else if (sender === 'ai') {
-                messageDiv.classList.add('ai-message');
-                messageDiv.innerHTML = renderMarkdown(text); 
-                
-            } else {
-                messageDiv.classList.add('system-message');
-                messageDiv.innerHTML = text;
-            }
-            
-            chatBox.appendChild(messageDiv);
-            chatBox.scrollTop = chatBox.scrollHeight;
-        }
-
-        async function fetchConfig() {
-            try {
-                const response = await fetch('/api/config');
-                if (response.ok) {
-                    const config = await response.json();
-                    const welcomeText = config.welcomeMessage || '欢迎使用 AI 助手！';
-                    appendMessage('ai', welcomeText);
-                } else {
-                    appendMessage('ai', '欢迎使用 AI 助手！ (无法连接到配置接口，或使用默认配置)');
-                }
-            } catch (error) {
-                appendMessage('system', '网络错误，无法连接到配置接口。');
-            }
-        }
-
-        // --- 核心功能函数：sendMessage (非流式，等待 JSON) ---
-        async function sendMessage() {
-            const message = messageInput.value.trim();
-            if (message === '') return;
-
-            appendMessage('user', message); 
-            
-            messageInput.value = '';
-            sendButton.disabled = true;
-            messageInput.placeholder = 'AI 正在思考...';
-            
-            // 3.5 变动：新增 'ai-thinking' 类以触发呼吸动画
-            const aiThinkingMessage = document.createElement('div');
-            aiThinkingMessage.classList.add('message', 'ai-message', 'ai-thinking'); // 【新增类】
-            aiThinkingMessage.textContent = '思考中...'; 
-            chatBox.appendChild(aiThinkingMessage);
-            chatBox.scrollTop = chatBox.scrollHeight;
-
-
-            try {
-                const response = await fetch('/api/chat', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ role: "user", parts: [{ text: message }] }]
-                    })
-                });
-
-                const data = await response.json();
-                
-                aiThinkingMessage.remove(); // 动画停止
-
-                if (response.ok) {
-                    const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-                    appendMessage('ai', aiText || '抱歉，AI 返回了空响应。');
-                } else {
-                    const errorMessage = data.error ? `AI 接口错误：${data.error.message || data.error}` : `请求失败，状态码：${response.status}`;
-                    appendMessage('system', `AI 助手：${errorMessage}`);
-                }
-
-            } catch (error) {
-                aiThinkingMessage.remove(); // 动画停止
-                appendMessage('system', '网络连接失败，请检查您的网络。');
-                console.error('Chat error:', error);
-            } finally {
-                sendButton.disabled = false;
-                messageInput.placeholder = '向 AI 提问...';
-            }
-        }
-
-        // --- 事件监听器：包含输入法回车防误触修复 ---
-        sendButton.addEventListener('click', sendMessage);
-
-        messageInput.addEventListener('keydown', function(event) {
-            if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
-                event.preventDefault(); 
-                sendMessage();
-            }
-        });
-
-        document.addEventListener('DOMContentLoaded', fetchConfig);
-    </script>
-</body>
-</html>
+            // 2
