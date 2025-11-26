@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI 助手 3.0</title>
+    <title>AI 助手 2.5 (稳定版)</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='-.1em' x='-.05em' font-size='90'>✨</text></svg>">
     <style>
         /* 基础样式和全局重置 */
@@ -11,68 +11,76 @@
             font-family: 'Google Sans', 'Roboto', Arial, sans-serif;
             margin: 0;
             padding: 0;
-            background-color: #f0f4f9;
+            background-color: #f0f4f9; 
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            color: #3c4043;
-            overflow: hidden;
+            color: #3c4043; 
+            overflow: hidden; 
         }
+
+        /* 聊天容器 - 2.5 风格 */
         .chat-container {
             width: 95%;
-            max-width: 960px;
+            max-width: 960px; 
             background-color: #ffffff;
-            border-radius: 28px;
-            box-shadow: 0 8px 24px rgba(60, 64, 67, 0.15);
+            border-radius: 28px; 
+            box-shadow: 0 8px 24px rgba(60, 64, 67, 0.15); 
             display: flex;
             flex-direction: column;
-            height: 90vh;
+            height: 90vh; 
             min-height: 600px;
-            overflow: hidden;
+            overflow: hidden; 
         }
+
+        /* 头部 */
         .header {
             padding: 16px 24px;
-            background-color: #ffffff;
-            border-bottom: 1px solid #e8eaed;
-            color: #202124;
-            font-size: 1.5em;
-            font-weight: 500;
-            display: flex;
+            background-color: #ffffff; 
+            border-bottom: 1px solid #e8eaed; 
+            color: #202124; 
+            text-align: left; 
+            font-size: 1.5em; 
+            font-weight: 500; 
+            display: flex; 
             align-items: center;
-            justify-content: space-between;
+            justify-content: space-between; 
         }
+
+        /* 聊天消息显示区域 */
         .chat-box {
             flex-grow: 1;
-            padding: 20px 24px;
+            padding: 20px 24px; 
             overflow-y: auto;
             display: flex;
             flex-direction: column;
-            gap: 16px;
-            scroll-behavior: smooth;
+            gap: 16px; 
+            scroll-behavior: smooth; 
         }
+
+        /* 消息气泡 */
         .message {
-            padding: 12px 18px;
-            border-radius: 20px;
-            max-width: 80%;
+            padding: 12px 18px; 
+            border-radius: 20px; 
+            max-width: 80%; 
             line-height: 1.6;
             word-wrap: break-word;
             font-size: 0.95em;
-            color: #202124;
+            color: #202124; 
         }
         .user-message {
             align-self: flex-end;
-            background-color: #e6f4ea;
+            background-color: #e6f4ea; 
         }
         .ai-message {
             align-self: flex-start;
-            background-color: #f1f3f4;
-            /* 确保 AI 消息内部的格式化元素有空间 */
+            background-color: #f1f3f4; 
             padding-bottom: 5px; 
         }
         .system-message {
             align-self: center;
-            background-color: #fff2e0;
+            background-color: #fff2e0; 
             color: #ea8600;
             font-size: 0.85em;
             text-align: center;
@@ -90,7 +98,7 @@
             margin-top: 10px;
             font-family: Consolas, Monaco, 'Courier New', monospace;
             font-size: 0.9em;
-            white-space: pre-wrap; /* 允许代码块换行 */
+            white-space: pre-wrap; 
         }
         .ai-message pre code {
             display: block;
@@ -101,7 +109,7 @@
             font-weight: 600;
             margin-top: 15px;
             margin-bottom: 5px;
-            color: #1a73e8; /* 标题使用谷歌蓝 */
+            color: #1a73e8; 
         }
         .ai-message ul {
             padding-left: 20px;
@@ -113,36 +121,36 @@
             font-weight: 700;
         }
 
-        /* 输入区域样式保持不变 */
+        /* 输入区域样式 */
         .input-area {
             display: flex;
             padding: 16px 24px;
-            border-top: 1px solid #e8eaed;
-            background-color: #ffffff;
+            border-top: 1px solid #e8eaed; 
+            background-color: #ffffff; 
             align-items: center;
-            gap: 10px;
+            gap: 10px; 
         }
         #messageInput {
             flex-grow: 1;
             padding: 12px 18px;
-            border: 1px solid #dadce0;
-            border-radius: 24px;
+            border: 1px solid #dadce0; 
+            border-radius: 24px; 
             font-size: 1em;
-            outline: none;
+            outline: none; 
             transition: border-color 0.2s, box-shadow 0.2s;
-            background-color: #f8f9fa;
+            background-color: #f8f9fa; 
         }
         #messageInput:focus {
-            border-color: #8ab4f8;
-            box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.2);
-            background-color: #ffffff;
+            border-color: #8ab4f8; 
+            box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.2); 
+            background-color: #ffffff; 
         }
         #sendButton {
             padding: 12px 20px;
-            background-color: #1a73e8;
+            background-color: #1a73e8; 
             color: white;
             border: none;
-            border-radius: 24px;
+            border-radius: 24px; 
             cursor: pointer;
             font-size: 1em;
             transition: background-color 0.3s, box-shadow 0.3s;
@@ -151,11 +159,11 @@
             justify-content: center;
         }
         #sendButton:hover {
-            background-color: #1565c0;
+            background-color: #1565c0; 
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
         }
         #sendButton:disabled {
-            background-color: #dadce0;
+            background-color: #dadce0; 
             cursor: not-allowed;
         }
     </style>
@@ -178,9 +186,35 @@
         const chatBox = document.getElementById('chatBox');
         const messageInput = document.getElementById('messageInput');
         const sendButton = document.getElementById('sendButton');
+        
+        // --- 辅助函数：Markdown 渲染 ---
+        function renderMarkdown(text) {
+            let htmlText = text;
 
-        // --- 核心功能函数 ---
+            // 1. 替换代码块 (需在其他替换前完成)
+            htmlText = htmlText.replace(/```(\w*)\n([\s\S]*?)```/g, function(match, lang, code) {
+                const escapedCode = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                const language = lang ? `<span class="code-lang" style="font-size: 0.8em; color: #4285f4; display: block; margin-bottom: 5px;">${lang}</span>` : '';
+                return `<pre><code>${language}${escapedCode}</code></pre>`;
+            });
 
+            // 2. 替换标题 (H2)
+            htmlText = htmlText.replace(/^## (.*$)/gim, '<h2>$1</h2>');
+            
+            // 3. 替换无序列表 
+            htmlText = htmlText.replace(/^\* (.*$)/gim, '<ul><li>$1</li></ul>');
+            htmlText = htmlText.replace(/<\/li>\n<ul>/gim, '</li>'); 
+            htmlText = htmlText.replace(/<\/ul>(\n<ul>)?/gim, '</ul>');
+            
+            // 4. 替换加粗和斜体
+            htmlText = htmlText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            htmlText = htmlText.replace(/\*(.*?)\*/g, '<em>$1</em>');
+            
+            // 5. 替换普通换行符为 <br>
+            return htmlText.replace(/\n/g, '<br>');
+        }
+
+        // --- 核心功能函数：appendMessage ---
         function appendMessage(sender, text) {
             const messageDiv = document.createElement('div');
             messageDiv.classList.add('message');
@@ -191,31 +225,7 @@
                 
             } else if (sender === 'ai') {
                 messageDiv.classList.add('ai-message');
-                
-                // --- 增强 Markdown 渲染逻辑 ---
-                let htmlText = text;
-
-                // 1. 替换代码块
-                htmlText = htmlText.replace(/```(\w*)\n([\s\S]*?)```/g, function(match, lang, code) {
-                    const escapedCode = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                    const language = lang ? `<span class="code-lang" style="font-size: 0.8em; color: #4285f4; display: block; margin-bottom: 5px;">${lang}</span>` : '';
-                    return `<pre><code>${language}${escapedCode}</code></pre>`;
-                });
-
-                // 2. 替换标题 (H2)
-                htmlText = htmlText.replace(/^## (.*$)/gim, '<h2>$1</h2>');
-                
-                // 3. 替换无序列表 (简单处理)
-                htmlText = htmlText.replace(/^\* (.*$)/gim, '<ul><li>$1</li></ul>');
-                htmlText = htmlText.replace(/<\/li>\n<ul>/gim, '</li>'); 
-                htmlText = htmlText.replace(/<\/ul>(\n<ul>)?/gim, '</ul>');
-                
-                // 4. 替换加粗和斜体
-                htmlText = htmlText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-                htmlText = htmlText.replace(/\*(.*?)\*/g, '<em>$1</em>');
-                
-                // 5. 替换普通换行符为 <br>
-                messageDiv.innerHTML = htmlText.replace(/\n/g, '<br>');
+                messageDiv.innerHTML = renderMarkdown(text); 
                 
             } else {
                 messageDiv.classList.add('system-message');
@@ -231,7 +241,8 @@
                 const response = await fetch('/api/config');
                 if (response.ok) {
                     const config = await response.json();
-                    appendMessage('ai', config.welcomeMessage || '欢迎使用 AI 助手！');
+                    const welcomeText = config.welcomeMessage || '欢迎使用 AI 助手！';
+                    appendMessage('ai', welcomeText);
                 } else {
                     appendMessage('ai', '欢迎使用 AI 助手！ (无法连接到配置接口，或使用默认配置)');
                 }
@@ -240,11 +251,12 @@
             }
         }
 
+        // --- 核心功能函数：sendMessage (非流式，等待 JSON) ---
         async function sendMessage() {
             const message = messageInput.value.trim();
             if (message === '') return;
 
-            appendMessage('user', message);
+            appendMessage('user', message); 
             
             messageInput.value = '';
             sendButton.disabled = true;
@@ -253,7 +265,7 @@
             // 显示 AI 占位符
             const aiThinkingMessage = document.createElement('div');
             aiThinkingMessage.classList.add('message', 'ai-message');
-            aiThinkingMessage.textContent = '思考中...';
+            aiThinkingMessage.textContent = '思考中...'; 
             chatBox.appendChild(aiThinkingMessage);
             chatBox.scrollTop = chatBox.scrollHeight;
 
@@ -272,14 +284,15 @@
                     })
                 });
 
+                // 1. 等待完整的 JSON 响应
                 const data = await response.json();
                 
+                aiThinkingMessage.remove(); // 移除占位符
+
                 if (response.ok) {
                     const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-                    aiThinkingMessage.remove();
                     appendMessage('ai', aiText || '抱歉，AI 返回了空响应。');
                 } else {
-                    aiThinkingMessage.remove();
                     const errorMessage = data.error ? `AI 接口错误：${data.error.message || data.error}` : `请求失败，状态码：${response.status}`;
                     appendMessage('system', `AI 助手：${errorMessage}`);
                 }
@@ -294,11 +307,13 @@
             }
         }
 
-        // --- 事件监听器 ---
+        // --- 事件监听器：已修复输入法回车问题 ---
         sendButton.addEventListener('click', sendMessage);
+
         messageInput.addEventListener('keydown', function(event) {
-            if (event.key === 'Enter' && !event.shiftKey) {
-                event.preventDefault();
+            // 核心修复：检查 event.isComposing 是否为 false (即非输入法选词状态)
+            if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
+                event.preventDefault(); // 阻止默认的换行行为
                 sendMessage();
             }
         });
