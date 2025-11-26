@@ -6,17 +6,32 @@ const HISTORY_TTL = 3600 * 24; // 历史记录有效期 24 小时 (秒)
 const SESSION_COOKIE_NAME = 'chat_session_id';
 
 /**
- * 从 Cookie 中获取或生成一个唯一的 Session ID
+ * 从 Cookie 中获取或生成一个唯一的 Session ID，并设置 Set-Cookie 头部。
+ * @returns {{ sessionId: string, setCookieHeader: string | null }}
  */
-function getSessionId(request) {
+function getSessionData(request) {
     const cookieHeader = request.headers.get('Cookie');
+    let sessionId;
+    let setCookieHeader = null;
+
     if (cookieHeader) {
+        // 尝试从现有 Cookie 中获取 Session ID
         const cookies = cookieHeader.split(';').map(c => c.trim().split('='));
-        const sessionId = cookies.find(([name]) => name === SESSION_COOKIE_NAME)?.[1];
-        if (sessionId) return sessionId;
+        const existingSessionId = cookies.find(([name]) => name === SESSION_COOKIE_NAME)?.[1];
+        if (existingSessionId) {
+            sessionId = existingSessionId;
+        }
     }
-    // 如果没有，生成一个新的 UUID (简易版)
-    return crypto.randomUUID(); 
+    
+    // 如果没有或无效，则生成一个新的
+    if (!sessionId) {
+        sessionId = crypto.randomUUID(); 
+        // 构造 Set-Cookie 头部，确保新的 Session ID 被设置回客户端
+        const isSecure = request.url.startsWith('https://');
+        setCookieHeader = `${SESSION_COOKIE_NAME}=${sessionId}; Max-Age=${HISTORY_TTL}; Path=/; HttpOnly; SameSite=Strict${isSecure ? '; Secure' : ''}`;
+    }
+
+    return { sessionId, setCookieHeader };
 }
 
 /**
@@ -28,45 +43,46 @@ export async function onRequest({ request, env }) {
     }
 
     const config = await getConfig(env);
-    const sessionId = getSessionId(request);
+    const { sessionId, setCookieHeader } = getSessionData(request);
 
     try {
         const clientBody = await request.json();
         let history = [];
 
-        // 1. 从 KV 加载历史记录 (使用新的 env.HISTORY 绑定)
+        // 1. 从 KV 加载历史记录 (使用 env.HISTORY 绑定)
         const historyJson = await env.HISTORY.get(sessionId);
         if (historyJson) {
             history = JSON.parse(historyJson);
         }
         
         // 2. 构造完整的 contents 数组 (历史 + 当前问题)
-        // 确保 contents 数组中的每一个元素都有 role 和 parts 字段
+        // clientBody.contents 只有最新的用户消息
         const contents = [...history, ...clientBody.contents];
 
-        // 3. 构造 Gemini API 请求体 (使用完整的 history)
+        // 3. 构造 Gemini API 请求体 (使用完整的 contents 数组)
         const geminiRequestBody = JSON.stringify({
             contents: contents,
         });
 
+        // 4. 准备 API 接口 URL (Gemini 兼容的 Key 查询参数)
         const url = `${config.apiUrl}?key=${config.apiKey}`; 
 
-        // 4. 转发请求到 Gemini API
+        // 5. 转发请求到 Gemini API
         const aiResponse = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: geminiRequestBody, 
         });
 
-        // 5. 处理 AI 响应
+        // 6. 处理 AI 响应
         if (aiResponse.ok) {
             const aiData = await aiResponse.json();
             const aiText = aiData.candidates?.[0]?.content?.parts?.[0]?.text;
             
             if (aiText) {
-                // 6. 更新历史记录并保存到 KV
-                const newUserMessage = clientBody.contents[0];
-                const newAiResponse = { role: 'model', parts: [{ text: aiText }] };
+                // 7. 更新历史记录并保存到 KV
+                const newUserMessage = clientBody.contents[0]; // 用户消息
+                const newAiResponse = { role: 'model', parts: [{ text: aiText }] }; // AI回复
                 
                 history.push(newUserMessage, newAiResponse);
                 
@@ -74,20 +90,21 @@ export async function onRequest({ request, env }) {
                 await env.HISTORY.put(sessionId, JSON.stringify(history), { expirationTtl: HISTORY_TTL });
             }
             
-            // 7. 返回 Gemini API 的原始响应，但附带设置 Session ID 的头部
+            // 8. 返回 Gemini API 的响应
             const response = new Response(JSON.stringify(aiData), {
                 status: 200,
                 headers: { 'Content-Type': 'application/json' }
             });
 
-            // 设置 Session ID Cookie
-            const cookie = `${SESSION_COOKIE_NAME}=${sessionId}; Max-Age=${HISTORY_TTL}; Path=/; HttpOnly; SameSite=Strict`;
-            response.headers.set('Set-Cookie', cookie);
+            // 9. 设置 Session ID Cookie (如果需要)
+            if (setCookieHeader) {
+                response.headers.set('Set-Cookie', setCookieHeader);
+            }
 
             return response;
 
         } else {
-            // 8. 转发错误响应
+            // 10. 转发错误响应
             return aiResponse; 
         }
 
