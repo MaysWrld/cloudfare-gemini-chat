@@ -40,6 +40,7 @@
 
             const p = document.createElement('div');
             p.className = `message ${className}`;
+            // 注意: 实际项目中可能需要处理 markdown
             p.innerHTML = text;
             
             wrapper.appendChild(p);
@@ -77,9 +78,9 @@
                 const response = await fetch('/api/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    // ***** 关键修改部分：Gemini API 请求体 *****
+                    // ***** 关键点：只发送最新的用户消息 *****
                     body: JSON.stringify({
-                        // Gemini 使用 'contents' 数组，里面是 role/parts 结构
+                        // 后端会读取这个 contents，并将其与 KV 中的历史合并
                         contents: [{ role: "user", parts: [{ text: message }] }]
                     }) 
                     // *************************************
@@ -89,20 +90,3 @@
                     const data = await response.json();
                     // 解析 Gemini API 响应结构
                     const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || "（AI响应解析失败）";
-                    displayMessage('AI', aiText, 'ai-msg');
-                } else {
-                    const errorData = await response.json().catch(() => ({error: response.statusText})); 
-                    displayMessage('AI', `错误: ${response.status} - ${errorData.error || response.statusText}`, 'ai-msg');
-                }
-            } catch (error) {
-                displayMessage('AI', `网络错误: 无法连接到服务器。`, 'ai-msg');
-            } finally {
-                sendButton.disabled = false;
-                sendButton.textContent = '发送';
-            }
-        }
-
-        loadWelcomeMessage();
-    </script>
-</body>
-</html>
