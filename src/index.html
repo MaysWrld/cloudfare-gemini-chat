@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="light dark"> 
-    <title>AI 助手 3.7 (语言自适应)</title>
+    <title>AI 助手 3.8 (打断功能)</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='-.1em' x='-.05em' font-size='90'>✨</text></svg>">
     <style>
         /* =================================================== */
@@ -106,21 +106,25 @@
         const messageInput = document.getElementById('messageInput');
         const sendButton = document.getElementById('sendButton');
         
-        // --- 【新增】语言检测函数 ---
+        // --- 【新增全局状态】用于打断功能 ---
+        let currentAbortController = null; // 用于中断 fetch 请求
+        let typingTimerIds = [];         // 用于中断打字机动画
+        // ------------------------------------
+
+        // --- 【新增】中断动画函数 ---
+        function stopAllTyping() {
+            typingTimerIds.forEach(id => clearTimeout(id));
+            typingTimerIds = [];
+        }
+
+        // --- 【新增】语言检测函数 (保持不变) ---
         function detectLanguage(text) {
-            // 移除空白字符
             const trimmedText = text.replace(/\s/g, '');
             if (trimmedText.length === 0) return 'Unknown';
-
-            // 检查中文字符（Unicode 范围 4E00-9FFF 是 CJK 统一汉字）
             const chineseMatch = text.match(/[\u4e00-\u9fff]/g);
-            
-            // 如果中文字符数超过总非空白字符的 30%，则认为是中文
             if (chineseMatch && chineseMatch.length / trimmedText.length > 0.3) {
                 return 'Chinese';
             }
-
-            // 否则默认为英文（或混合/其他语言，但以英文指令为主）
             return 'English';
         }
 
@@ -161,7 +165,7 @@
             chatBox.scrollTop = chatBox.scrollHeight;
         }
 
-        // --- 打字机效果函数 (延迟 10ms) ---
+        // --- 打字机效果函数 (新增 ID 跟踪) ---
         function startTyping(messageElement, rawText, delay = 10) { 
             return new Promise(resolve => {
                 let i = 0;
@@ -175,7 +179,8 @@
                             
                             chatBox.scrollTop = chatBox.scrollHeight;
                             i++;
-                            setTimeout(type, delay);
+                            const timerId = setTimeout(type, delay);
+                            typingTimerIds.push(timerId); // 【跟踪 ID】
                         } catch (e) {
                             console.error("Typing rendering error:", e);
                             messageElement.innerHTML = renderMarkdown(rawText);
@@ -192,7 +197,7 @@
             });
         }
         
-        // --- 欢迎语的异步处理 (延迟 7ms) ---
+        // --- 欢迎语的异步处理 (新增 ID 跟踪) ---
         function displayWelcomeMessage(welcomeMessageDiv, welcomeText) {
             let i = 0;
             const delay = 7;
@@ -204,7 +209,8 @@
                         welcomeMessageDiv.innerHTML = renderMarkdown(welcomeText.substring(0, i + 1)) + cursor;
                         chatBox.scrollTop = chatBox.scrollHeight;
                         i++;
-                        setTimeout(typeWelcome, delay);
+                        const timerId = setTimeout(typeWelcome, delay);
+                        typingTimerIds.push(timerId); // 【跟踪 ID】
                     } catch (e) {
                         console.error("Welcome message typing error, falling back:", e);
                         welcomeMessageDiv.innerHTML = renderMarkdown(welcomeText);
@@ -239,18 +245,29 @@
             }
         }
 
-        // --- 核心功能函数：sendMessage (已集成语言自适应) ---
+        // --- 核心功能函数：sendMessage (已集成打断功能) ---
         async function sendMessage() {
             const message = messageInput.value.trim();
             if (message === '') return;
 
-            // --- 【关键修复】语言自适应逻辑 ---
+            // --- 【第一步：实现打断功能】清理旧操作 ---
+            stopAllTyping(); // 停止所有动画
+            if (currentAbortController) {
+                currentAbortController.abort(); // 取消正在进行的 fetch 请求
+                currentAbortController = null;
+                // 立即移除旧的思考框
+                const thinking = document.querySelector('.ai-thinking');
+                if (thinking) thinking.remove();
+                appendMessage('system', '🔴 旧操作已中断。正在处理新请求...'); // 提供反馈
+            }
+            // ----------------------------------------
+
+            // --- 语言自适应逻辑 ---
             const detectedLang = detectLanguage(message);
             const langInstruction = detectedLang === 'Chinese' 
                 ? "请严格使用中文回复此查询。如果用户使用多语言，则以用户主要语言或指令语言为准。始终避免使用英文，除非用户明确输入英文内容。" 
                 : "Strictly use English to respond to this query. If the user uses multiple languages, prioritize the response in English.";
             
-            // 构建发送给 API 的最终消息内容，将指令放在前面
             const finalMessage = `${langInstruction}\n\n用户查询/User Query: ${message}`;
             // ------------------------------------
 
@@ -260,7 +277,11 @@
             sendButton.disabled = true;
             messageInput.placeholder = 'AI 正在思考...';
             
-            // 1. 创建呼吸思考框
+            // 2. 设置新的 AbortController
+            currentAbortController = new AbortController();
+            const signal = currentAbortController.signal;
+
+            // 3. 创建呼吸思考框
             const aiThinkingMessage = document.createElement('div');
             aiThinkingMessage.classList.add('message', 'ai-message', 'ai-thinking'); 
             aiThinkingMessage.textContent = '思考中...'; 
@@ -273,10 +294,16 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        contents: [{ role: "user", parts: [{ text: finalMessage }] }] // 【发送最终指令消息】
-                    })
+                        contents: [{ role: "user", parts: [{ text: finalMessage }] }]
+                    }),
+                    signal: signal // 【传递中止信号】
                 });
 
+                // 检查请求是否被 AbortController 明确取消
+                if (signal.aborted) {
+                    return; // 如果被中断，直接退出
+                }
+                
                 const data = await response.json();
                 
                 aiThinkingMessage.remove(); 
@@ -284,12 +311,10 @@
                 if (response.ok) {
                     const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || '抱歉，AI 返回了空响应。';
                     
-                    // 3. 创建最终的 AI 消息元素
                     const aiMessageDiv = document.createElement('div');
                     aiMessageDiv.classList.add('message', 'ai-message');
                     chatBox.appendChild(aiMessageDiv);
                     
-                    // 4. 启动加速后的打字机效果，并等待其完成
                     await startTyping(aiMessageDiv, aiText); 
                     
                 } else {
@@ -299,9 +324,14 @@
 
             } catch (error) {
                 aiThinkingMessage.remove(); 
+                if (error.name === 'AbortError') {
+                    // 这是预期的中断错误，不做额外提示
+                    return;
+                }
                 appendMessage('system', '网络连接失败，请检查您的网络。');
                 console.error('Chat error:', error);
             } finally {
+                currentAbortController = null; // 确保 Controller 状态被清理
                 sendButton.disabled = false;
                 messageInput.placeholder = '向 AI 提问...';
             }
