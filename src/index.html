@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="light dark"> 
-    <title>AI 助手 3.5 (最终稳定版)</title>
+    <title>AI 助手 3.6 (加速版)</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='-.1em' x='-.05em' font-size='90'>✨</text></svg>">
     <style>
         /* =================================================== */
@@ -109,7 +109,6 @@
         // --- 辅助函数：Markdown 渲染 (保持不变) ---
         function renderMarkdown(text) {
             let htmlText = text;
-
             htmlText = htmlText.replace(/```(\w*)\n([\s\S]*?)```/g, function(match, lang, code) {
                 const escapedCode = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
                 const language = lang ? `<span class="code-lang" style="font-size: 0.8em; color: var(--color-code-lang); display: block; margin-bottom: 5px;">${lang}</span>` : '';
@@ -144,15 +143,15 @@
             chatBox.scrollTop = chatBox.scrollHeight;
         }
 
-        // --- 打字机效果函数 (已增强健壮性) ---
-        function startTyping(messageElement, rawText, delay = 30) {
+        // --- 打字机效果函数 (默认延迟从 30ms 降至 10ms) ---
+        function startTyping(messageElement, rawText, delay = 10) { // 【调整】默认延迟为 10ms
             return new Promise(resolve => {
                 let i = 0;
                 const cursor = '<span style="opacity: 0.8; margin-left: 2px; color: var(--text-main);">▋</span>'; 
                 
                 function type() {
                     if (i < rawText.length) {
-                        try { // 确保渲染出错不会导致 Promise 挂起
+                        try {
                             const currentText = rawText.substring(0, i + 1);
                             messageElement.innerHTML = renderMarkdown(currentText) + cursor;
                             
@@ -160,16 +159,14 @@
                             i++;
                             setTimeout(type, delay);
                         } catch (e) {
-                            // 渲染失败，强制显示全部文本并结束打字机
                             console.error("Typing rendering error:", e);
                             messageElement.innerHTML = renderMarkdown(rawText);
                             resolve(); 
                         }
                     } else {
-                        // 打字完成，移除光标，最终渲染一次
                         messageElement.innerHTML = renderMarkdown(rawText);
                         chatBox.scrollTop = chatBox.scrollHeight;
-                        resolve(); // 标记 Promise 完成
+                        resolve();
                     }
                 }
 
@@ -177,11 +174,10 @@
             });
         }
         
-        // --- 【修复】欢迎语的异步处理 ---
+        // --- 欢迎语的异步处理 (延迟从 20ms 降至 7ms) ---
         function displayWelcomeMessage(welcomeMessageDiv, welcomeText) {
-            // 使用一个更快的速度（20ms）
             let i = 0;
-            const delay = 20; 
+            const delay = 7; // 【调整】延迟为 7ms
             const cursor = '<span style="opacity: 0.8; margin-left: 2px; color: var(--text-main);">▋</span>'; 
             
             function typeWelcome() {
@@ -215,7 +211,6 @@
                     welcomeMessageDiv.classList.add('message', 'ai-message');
                     chatBox.appendChild(welcomeMessageDiv);
                     
-                    // 【关键修复】：不再使用 await 阻塞初始化流程，在后台异步执行打字机效果
                     displayWelcomeMessage(welcomeMessageDiv, welcomeText);
                     
                 } else {
@@ -226,7 +221,7 @@
             }
         }
 
-        // --- 核心功能函数：sendMessage (已集成打字机效果) ---
+        // --- 核心功能函数：sendMessage ---
         async function sendMessage() {
             const message = messageInput.value.trim();
             if (message === '') return;
@@ -256,7 +251,7 @@
 
                 const data = await response.json();
                 
-                aiThinkingMessage.remove(); // 2. 移除呼吸思考框 (动画停止)
+                aiThinkingMessage.remove(); 
 
                 if (response.ok) {
                     const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || '抱歉，AI 返回了空响应。';
@@ -266,7 +261,7 @@
                     aiMessageDiv.classList.add('message', 'ai-message');
                     chatBox.appendChild(aiMessageDiv);
                     
-                    // 4. 启动打字机效果，并等待其完成
+                    // 4. 启动加速后的打字机效果，并等待其完成
                     await startTyping(aiMessageDiv, aiText); 
                     
                 } else {
@@ -275,12 +270,10 @@
                 }
 
             } catch (error) {
-                // 确保在任何网络/API 错误发生时，思考框都会被移除
                 aiThinkingMessage.remove(); 
                 appendMessage('system', '网络连接失败，请检查您的网络。');
                 console.error('Chat error:', error);
             } finally {
-                // 5. 确保在打字机效果结束后，按钮被重新启用
                 sendButton.disabled = false;
                 messageInput.placeholder = '向 AI 提问...';
             }
