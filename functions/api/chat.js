@@ -1,31 +1,24 @@
-// /functions/api/chat.js - 最终稳定且启用对话记忆版本
+// /functions/api/chat.js - Streaming Version
+// 依赖于 auth.js 导出的 getConfig, getHistory, saveHistory 函数
 
-import { getConfig } from '../auth'; // 注意：使用导入，不使用内联
+import { GoogleGenAI } from '@google/genai';
+// 假设 auth.js 导出 getConfig, getHistory, saveHistory
+import { getConfig, getHistory, saveHistory } from '../auth'; 
 
-const HISTORY_TTL = 3600 * 24;
 const SESSION_COOKIE_NAME = 'chat_session_id';
 
-function getSessionData(request) {
+function getSessionId(request) {
     const cookieHeader = request.headers.get('Cookie');
-    let sessionId;
-    let setCookieHeader = null;
-
-    if (cookieHeader) {
-        const cookies = cookieHeader.split(';').map(c => c.trim().split('='));
-        const existingSessionId = cookies.find(([name]) => name === SESSION_COOKIE_NAME)?.[1];
-        if (existingSessionId) {
-            sessionId = existingSessionId;
-        }
-    }
+    if (!cookieHeader) return null;
     
-    if (!sessionId) {
-        sessionId = (Date.now() + Math.random()).toString(36).replace('.', '');
-        
-        const isSecure = request.url.startsWith('https://');
-        setCookieHeader = `${SESSION_COOKIE_NAME}=${sessionId}; Max-Age=${HISTORY_TTL}; Path=/; HttpOnly; SameSite=Strict${isSecure ? '; Secure' : ''}`;
-    }
+    const cookies = cookieHeader.split(';').map(c => c.trim().split('='));
+    const sessionId = cookies.find(([name]) => name === SESSION_COOKIE_NAME)?.[1];
+    
+    if (sessionId) return sessionId;
 
-    return { sessionId, setCookieHeader };
+    // 如果不存在，生成一个新的 Session ID
+    const newSessionId = crypto.randomUUID();
+    return newSessionId;
 }
 
 export async function onRequest({ request, env }) {
@@ -33,67 +26,86 @@ export async function onRequest({ request, env }) {
         return new Response('Method Not Allowed', { status: 405 });
     }
 
-    const config = await getConfig(env);
-    const { sessionId, setCookieHeader } = getSessionData(request);
+    const sessionId = getSessionId(request);
 
     try {
-        const clientBody = await request.json();
-        let history = [];
-
-        const historyJson = await env.HISTORY.get(sessionId);
-        if (historyJson) {
-            history = JSON.parse(historyJson);
+        const config = await getConfig(env);
+        if (!config || !config.apiKey) {
+            return new Response(JSON.stringify({ error: "API key is not configured in admin panel." }), { status: 500 });
         }
         
-        const contents = [...history, ...clientBody.contents];
-        const geminiRequestBody = JSON.stringify({ contents: contents });
-        const url = `${config.apiUrl}?key=${config.apiKey}`; 
+        const requestBody = await request.json();
+        const userContents = requestBody.contents;
 
-        const aiResponse = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: geminiRequestBody, 
+        // 1. 获取聊天历史
+        let history = await getHistory(env, sessionId);
+        let contents = [...history, ...userContents];
+
+        // 2. 初始化 Gemini 客户端
+        const ai = new GoogleGenAI({ apiKey: config.apiKey });
+        
+        // 3. 开始流式请求
+        const responseStream = await ai.models.generateContentStream({
+            model: 'gemini-2.5-flash', // 使用的模型，可从配置中读取
+            contents: contents,
+            config: {
+                systemInstruction: config.systemInstruction, // 从配置中读取系统指令
+            }
         });
 
-        if (aiResponse.ok) {
-            const aiData = await aiResponse.json();
-            const aiText = aiData.candidates?.[0]?.content?.parts?.[0]?.text;
-            
-            if (aiText) {
-                const newUserMessage = clientBody.contents[0]; 
-                const newAiResponse = { role: 'model', parts: [{ text: aiText }] }; 
+        // 4. 创建流式响应对象 (TransformStream)
+        const { readable, writable } = new TransformStream();
+        const writer = writable.getWriter();
+        const encoder = new TextEncoder();
+
+        // 5. 异步处理流并发送给前端
+        async function streamResponse() {
+            let fullResponseText = "";
+            let newHistoryEntry = { role: "model", parts: [{ text: "" }] };
+
+            try {
+                for await (const chunk of responseStream) {
+                    const chunkText = chunk.text;
+                    if (chunkText) {
+                        // 写入流，前端立即接收
+                        await writer.write(encoder.encode(chunkText));
+                        fullResponseText += chunkText;
+                    }
+                }
+
+                // 6. 响应结束后，更新历史记录
+                newHistoryEntry.parts[0].text = fullResponseText;
+                contents.push(newHistoryEntry);
+                // 限制历史记录长度，避免 KV 存储过大
+                const MAX_HISTORY_LENGTH = 20; 
+                const trimmedContents = contents.slice(contents.length - MAX_HISTORY_LENGTH);
                 
-                history.push(newUserMessage, newAiResponse);
-                
-                await env.HISTORY.put(sessionId, JSON.stringify(history), { expirationTtl: HISTORY_TTL });
-            }
-            
-            const response = new Response(JSON.stringify(aiData), {
-                status: 200,
-                headers: { 'Content-Type': 'application/json' }
-            });
+                await saveHistory(env, sessionId, trimmedContents);
 
-            if (setCookieHeader) {
-                response.headers.set('Set-Cookie', setCookieHeader);
+            } catch (error) {
+                console.error("Streaming error:", error);
+                await writer.write(encoder.encode(`\n[STREAM ERROR: ${error.message || 'API stream failed.'}]`));
+            } finally {
+                await writer.close();
             }
-
-            return response;
-
-        } else {
-            const errorBody = await aiResponse.text();
-            const errorResponse = new Response(errorBody, {
-                status: aiResponse.status,
-                headers: { 'Content-Type': aiResponse.headers.get('Content-Type') || 'application/json' }
-            });
-            
-            if (setCookieHeader) {
-                errorResponse.headers.set('Set-Cookie', setCookieHeader);
-            }
-            return errorResponse;
         }
 
+        // 立即开始流式处理
+        streamResponse();
+
+        // 7. 返回流式响应
+        const headers = { 
+            'Content-Type': 'text/plain; charset=utf-8',
+        };
+        // 仅在 Cookie 不存在时设置新的 Session ID Cookie
+        if (!request.headers.get('Cookie')?.includes(`${SESSION_COOKIE_NAME}=${sessionId}`)) {
+             headers['Set-Cookie'] = `${SESSION_COOKIE_NAME}=${sessionId}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=${60 * 60 * 24 * 30}`; // 30天有效期
+        }
+
+        return new Response(readable, { headers });
+
     } catch (error) {
-        console.error("AI Request Error:", error);
-        return new Response(JSON.stringify({ error: "代理请求失败，或致命运行时错误。" }), { status: 500 });
+        console.error("API Chat Setup Error:", error);
+        return new Response(JSON.stringify({ error: "Internal Server Error" }), { status: 500 });
     }
 }
