@@ -1,4 +1,4 @@
-// /functions/api/chat.js - 启用对话记忆版本
+// /functions/api/chat.js - 启用对话记忆版本 (Cookie 修复)
 
 import { getConfig } from '../auth'; 
 
@@ -90,13 +90,13 @@ export async function onRequest({ request, env }) {
                 await env.HISTORY.put(sessionId, JSON.stringify(history), { expirationTtl: HISTORY_TTL });
             }
             
-            // 8. 返回 Gemini API 的响应
+            // 8. 构造最终返回给客户端的响应对象 (成功路径)
             const response = new Response(JSON.stringify(aiData), {
                 status: 200,
                 headers: { 'Content-Type': 'application/json' }
             });
 
-            // 9. 设置 Session ID Cookie (如果需要)
+            // 9. 确保 Session ID Cookie 被设置
             if (setCookieHeader) {
                 response.headers.set('Set-Cookie', setCookieHeader);
             }
@@ -104,8 +104,21 @@ export async function onRequest({ request, env }) {
             return response;
 
         } else {
-            // 10. 转发错误响应
-            return aiResponse; 
+            // 10. 如果 AI API 返回错误状态（非 200/ok）
+            //    我们仍需返回错误信息，并确保 Cookie 被设置。
+            
+            // 复制错误响应的内容和状态
+            const errorBody = await aiResponse.text();
+            const errorResponse = new Response(errorBody, {
+                status: aiResponse.status,
+                headers: { 'Content-Type': aiResponse.headers.get('Content-Type') || 'application/json' }
+            });
+            
+            // 确保 Session ID Cookie 被设置 (即使是错误响应，也要建立会话)
+            if (setCookieHeader) {
+                errorResponse.headers.set('Set-Cookie', setCookieHeader);
+            }
+            return errorResponse;
         }
 
     } catch (error) {
