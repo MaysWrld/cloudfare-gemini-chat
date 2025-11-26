@@ -1,4 +1,4 @@
-// /functions/api/chat.js - 启用对话记忆版本 (带测试点 A)
+// /functions/api/chat.js - 隔离 getConfig 调试版本
 
 import { getConfig } from '../auth'; 
 
@@ -41,7 +41,10 @@ export async function onRequest({ request, env }) {
         return new Response('Method Not Allowed', { status: 405 });
     }
 
-    const config = await getConfig(env);
+    // *** 隔离 getConfig 语句 (嫌疑人A) ***
+    // const config = await getConfig(env); // 原始代码，现在被跳过
+    const config = { apiUrl: 'DEBUG_URL', apiKey: 'DEBUG_KEY' }; // 使用虚拟配置，以避免 env.CONFIG 绑定错误
+
     const { sessionId, setCookieHeader } = getSessionData(request);
 
     try {
@@ -57,6 +60,7 @@ export async function onRequest({ request, env }) {
         let history = [];
 
         // 1. 从 KV 加载历史记录 (使用 env.HISTORY 绑定)
+        // 注意：如果 env.HISTORY 绑定错误，代码会在这里出错
         const historyJson = await env.HISTORY.get(sessionId);
         if (historyJson) {
             history = JSON.parse(historyJson);
@@ -70,62 +74,22 @@ export async function onRequest({ request, env }) {
             contents: contents,
         });
 
-        // 4. 准备 API 接口 URL (Gemini 兼容的 Key 查询参数)
+        // 4. 准备 API 接口 URL (使用 DEBUG_URL)
         const url = `${config.apiUrl}?key=${config.apiKey}`; 
 
-        // 5. 转发请求到 Gemini API
+        // 5. 转发请求到 Gemini API (此段代码理论上不会运行)
         const aiResponse = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: geminiRequestBody, 
         });
 
-        // 6. 处理 AI 响应
-        if (aiResponse.ok) {
-            const aiData = await aiResponse.json();
-            const aiText = aiData.candidates?.[0]?.content?.parts?.[0]?.text;
-            
-            if (aiText) {
-                // 7. 更新历史记录并保存到 KV
-                const newUserMessage = clientBody.contents[0]; 
-                const newAiResponse = { role: 'model', parts: [{ text: aiText }] }; 
-                
-                history.push(newUserMessage, newAiResponse);
-                
-                // 将更新后的历史记录写回 KV (设置有效期)
-                await env.HISTORY.put(sessionId, JSON.stringify(history), { expirationTtl: HISTORY_TTL });
-            }
-            
-            // 8. 构造最终返回给客户端的响应对象 (成功路径)
-            const response = new Response(JSON.stringify(aiData), {
-                status: 200,
-                headers: { 'Content-Type': 'application/json' }
-            });
+        // ... (以下代码理论上不会运行) ...
 
-            // 9. 确保 Session ID Cookie 被设置
-            if (setCookieHeader) {
-                response.headers.set('Set-Cookie', setCookieHeader);
-            }
-
-            return response;
-
-        } else {
-            // 10. 如果 AI API 返回错误状态（非 200/ok）
-            const errorBody = await aiResponse.text();
-            const errorResponse = new Response(errorBody, {
-                status: aiResponse.status,
-                headers: { 'Content-Type': aiResponse.headers.get('Content-Type') || 'application/json' }
-            });
-            
-            // 确保 Session ID Cookie 被设置
-            if (setCookieHeader) {
-                errorResponse.headers.set('Set-Cookie', setCookieHeader);
-            }
-            return errorResponse;
-        }
+        return new Response(JSON.stringify({ error: "Debug mode active" }), { status: 500 });
 
     } catch (error) {
         console.error("AI Request Error:", error);
-        return new Response(JSON.stringify({ error: "代理请求失败，无法连接到 AI 模型接口。" }), { status: 500 });
+        return new Response(JSON.stringify({ error: "代理请求失败，或致命运行时错误。" }), { status: 500 });
     }
 }
