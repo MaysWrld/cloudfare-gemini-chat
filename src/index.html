@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="light dark"> 
-    <title>AI 助手 3.0 (深色模式)</title>
+    <title>AI 助手 3.5 (呼吸效应)</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='-.1em' x='-.05em' font-size='90'>✨</text></svg>">
     <style>
         /* =================================================== */
@@ -26,6 +26,7 @@
             --color-code-lang: #4285f4;
             --color-focus-blue: #8ab4f8;
             --color-brand-blue: #1a73e8;
+            --color-brand-blue-rgb: 26, 115, 232; /* 【新增】RGB 值用于动画 */
         }
 
         /* 深色模式：根据设备设置覆盖颜色变量 */
@@ -37,7 +38,7 @@
                 --text-main: #e0e0e0;
                 --text-header: #f5f5f5;
                 --border-main: #444444;
-                --color-user: #3f4b5e; /* 暗蓝 */
+                --color-user: #3f4b5e; 
                 --color-ai: #292929;
                 --color-system-bg: #4a3e2a; 
                 --color-system-text: #fcc203; 
@@ -45,6 +46,7 @@
                 --color-code-lang: #79a6fe;
                 --color-focus-blue: #5b92e5;
                 --color-brand-blue: #5b92e5;
+                --color-brand-blue-rgb: 91, 146, 229; /* 【新增】RGB 值用于动画 */
             }
         }
         
@@ -60,11 +62,11 @@
         
         body {
             font-family: 'Google Sans', 'Roboto', Arial, sans-serif;
-            background-color: var(--bg-main); /* 使用变量 */
+            background-color: var(--bg-main); 
             display: flex;
             justify-content: center;
             align-items: center;
-            color: var(--text-main); /* 使用变量 */
+            color: var(--text-main); 
         }
 
         /* 聊天容器 */
@@ -72,11 +74,12 @@
             width: 100%; 
             height: 100%; 
             max-width: 960px; 
-            background-color: var(--bg-card); /* 使用变量 */
+            background-color: var(--bg-card); 
             border-radius: 0; 
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2); 
             display: flex;
             flex-direction: column;
+            min-height: initial; 
             overflow: hidden; 
         }
 
@@ -91,9 +94,9 @@
         /* 头部 */
         .header {
             padding: 16px 24px;
-            background-color: var(--bg-card); /* 使用变量 */
-            border-bottom: 1px solid var(--border-main); /* 使用变量 */
-            color: var(--text-header); /* 使用变量 */
+            background-color: var(--bg-card); 
+            border-bottom: 1px solid var(--border-main); 
+            color: var(--text-header); 
             font-size: 1.5em; 
             font-weight: 500; 
             display: flex; 
@@ -124,16 +127,16 @@
         }
         .user-message {
             align-self: flex-end;
-            background-color: var(--color-user); /* 使用变量 */
+            background-color: var(--color-user); 
         }
         .ai-message {
             align-self: flex-start;
-            background-color: var(--color-ai); /* 使用变量 */
+            background-color: var(--color-ai); 
         }
         .system-message {
             align-self: center;
-            background-color: var(--color-system-bg); /* 使用变量 */
-            color: var(--color-system-text); /* 使用变量 */
+            background-color: var(--color-system-bg); 
+            color: var(--color-system-text); 
             font-size: 0.85em;
             text-align: center;
             padding: 8px 12px;
@@ -141,44 +144,40 @@
             max-width: 60%;
         }
 
-        /* --- Markdown 样式增强 --- */
-        .ai-message pre {
-            background-color: var(--color-code-bg); /* 使用变量 */
-            padding: 10px;
-            border-radius: 8px;
-            overflow-x: auto;
-            margin-top: 10px;
-            font-family: Consolas, Monaco, 'Courier New', monospace;
-            font-size: 0.9em;
-            white-space: pre-wrap; 
+        /* --- 3.5 新增：思考中对话框的呼吸动画效果 --- */
+        @keyframes breathe-border {
+            0%, 100% { 
+                /* 颜色使用 var(--color-brand-blue-rgb) */
+                box-shadow: 0 0 0 0px rgba(var(--color-brand-blue-rgb), 0.5); 
+            }
+            50% { 
+                box-shadow: 0 0 0 3px rgba(var(--color-brand-blue-rgb), 0.8); 
+            }
         }
-        .ai-message pre code {
-            display: block;
-            padding-left: 0;
+        
+        .ai-thinking {
+            /* 确保边框可见，并应用动画 */
+            border: 1px solid var(--color-brand-blue); 
+            box-sizing: border-box;
+            animation: breathe-border 1.5s infinite ease-in-out;
+            padding: 11px 17px; /* 调整 padding 以抵消边框和 box-shadow 占用的空间 */
         }
-        .ai-message h2 {
-            font-size: 1.2em;
-            font-weight: 600;
-            margin-top: 15px;
-            margin-bottom: 5px;
-            color: var(--color-brand-blue); /* 使用变量 */
-        }
-        .ai-message ul {
-            padding-left: 20px;
-            margin-top: 5px;
-            margin-bottom: 5px;
-            list-style: disc;
-        }
-        .ai-message strong {
-            font-weight: 700;
-        }
+        /* --- End 3.5 Feature --- */
+
+
+        /* --- Markdown 样式（保持不变） --- */
+        .ai-message pre { background-color: var(--color-code-bg); padding: 10px; border-radius: 8px; overflow-x: auto; margin-top: 10px; font-family: Consolas, Monaco, 'Courier New', monospace; font-size: 0.9em; white-space: pre-wrap; }
+        .ai-message pre code { display: block; padding-left: 0; }
+        .ai-message h2 { font-size: 1.2em; font-weight: 600; margin-top: 15px; margin-bottom: 5px; color: var(--color-brand-blue); }
+        .ai-message ul { padding-left: 20px; margin-top: 5px; margin-bottom: 5px; list-style: disc; }
+        .ai-message strong { font-weight: 700; }
 
         /* 输入区域样式 */
         .input-area {
             display: flex;
             padding: 16px 24px;
-            border-top: 1px solid var(--border-main); /* 使用变量 */
-            background-color: var(--bg-card); /* 使用变量 */
+            border-top: 1px solid var(--border-main); 
+            background-color: var(--bg-card); 
             align-items: center;
             gap: 10px; 
             flex-shrink: 0; 
@@ -186,22 +185,22 @@
         #messageInput {
             flex-grow: 1;
             padding: 12px 18px;
-            border: 1px solid var(--border-main); /* 使用变量 */
+            border: 1px solid var(--border-main); 
             border-radius: 24px; 
             font-size: 1em;
             outline: none; 
             transition: border-color 0.2s, box-shadow 0.2s;
-            background-color: var(--bg-input); /* 使用变量 */
+            background-color: var(--bg-input); 
             color: var(--text-main);
         }
         #messageInput:focus {
-            border-color: var(--color-focus-blue); /* 使用变量 */
+            border-color: var(--color-focus-blue); 
             box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.2); 
-            background-color: var(--bg-card); /* 使用变量 */
+            background-color: var(--bg-card); 
         }
         #sendButton {
             padding: 12px 20px;
-            background-color: var(--color-brand-blue); /* 使用变量 */
+            background-color: var(--color-brand-blue); 
             color: white;
             border: none;
             border-radius: 24px; 
@@ -213,7 +212,7 @@
             justify-content: center;
         }
         #sendButton:hover {
-            background-color: #1565c0; /* 保持hover色为固定深色 */
+            background-color: #1565c0; 
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
         }
         #sendButton:disabled {
@@ -299,7 +298,7 @@
             }
         }
 
-        // --- 核心功能函数：sendMessage (保持不变) ---
+        // --- 核心功能函数：sendMessage (非流式，等待 JSON) ---
         async function sendMessage() {
             const message = messageInput.value.trim();
             if (message === '') return;
@@ -310,8 +309,9 @@
             sendButton.disabled = true;
             messageInput.placeholder = 'AI 正在思考...';
             
+            // 3.5 变动：新增 'ai-thinking' 类以触发呼吸动画
             const aiThinkingMessage = document.createElement('div');
-            aiThinkingMessage.classList.add('message', 'ai-message');
+            aiThinkingMessage.classList.add('message', 'ai-message', 'ai-thinking'); // 【新增类】
             aiThinkingMessage.textContent = '思考中...'; 
             chatBox.appendChild(aiThinkingMessage);
             chatBox.scrollTop = chatBox.scrollHeight;
@@ -328,7 +328,7 @@
 
                 const data = await response.json();
                 
-                aiThinkingMessage.remove(); 
+                aiThinkingMessage.remove(); // 动画停止
 
                 if (response.ok) {
                     const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
@@ -339,7 +339,7 @@
                 }
 
             } catch (error) {
-                aiThinkingMessage.remove();
+                aiThinkingMessage.remove(); // 动画停止
                 appendMessage('system', '网络连接失败，请检查您的网络。');
                 console.error('Chat error:', error);
             } finally {
@@ -352,7 +352,6 @@
         sendButton.addEventListener('click', sendMessage);
 
         messageInput.addEventListener('keydown', function(event) {
-            // 核心修复：只有在非输入法选词状态 (!event.isComposing) 且按下 Enter 键时才触发发送
             if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
                 event.preventDefault(); 
                 sendMessage();
