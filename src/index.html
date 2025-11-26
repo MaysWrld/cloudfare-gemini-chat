@@ -131,7 +131,8 @@
                     const config = await response.json();
                     appendMessage('ai', config.welcomeMessage || '欢迎使用 AI 助手！');
                 } else {
-                    appendMessage('system', '无法加载配置，请检查 /api/config 接口。');
+                    // 如果 /api/config 失败，至少显示默认欢迎语
+                    appendMessage('ai', '欢迎使用 AI 助手！ (无法连接到配置接口)');
                 }
             } catch (error) {
                 appendMessage('system', '网络错误，无法连接到配置接口。');
@@ -142,8 +143,8 @@
             const message = messageInput.value.trim();
             if (message === '') return;
 
-            // 1. 在聊天框显示用户消息
-            appendMessage('user', message);
+            // 1. 在聊天框显示用户消息 <--- 关键点
+            appendMessage('user', message); 
             messageInput.value = ''; // 清空输入框
             sendButton.disabled = true;
             messageInput.placeholder = 'AI 正在思考...';
