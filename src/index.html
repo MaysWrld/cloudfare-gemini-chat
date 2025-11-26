@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="light dark"> 
-    <title>AI 助手 5.3 (平滑置顶 + 偏移修正)</title>
+    <title>AI 助手 5.6 (平滑精确置顶，无偏移)</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2d000/svg' viewBox='0 0 100 100'><text y='-.1em' x='-.05em' font-size='90'>✨</text></svg>">
     <style>
         /* =================================================== */
@@ -116,23 +116,12 @@
             typingTimerIds.forEach(id => clearTimeout(id));
             typingTimerIds = [];
         }
-
-        // --- 语言检测函数 (保留但未使用) ---
-        function detectLanguage(text) {
-            const trimmedText = text.replace(/\s/g, '');
-            if (trimmedText.length === 0) return 'Unknown';
-            const chineseMatch = text.match(/[\u4e00-\u9fff]/g);
-            if (chineseMatch && chineseMatch.length / trimmedText.length > 0.3) {
-                return 'Chinese';
-            }
-            return 'English';
-        }
-
+        
         // --- 辅助函数：Markdown 渲染 (保持不变) ---
         function renderMarkdown(text) {
             let htmlText = text;
             htmlText = htmlText.replace(/```(\w*)\n([\s\S]*?)```/g, function(match, lang, code) {
-                const escapedCode = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '>gt;');
+                const escapedCode = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
                 const language = lang ? `<span class="code-lang" style="font-size: 0.8em; color: var(--color-code-lang); display: block; margin-bottom: 5px;">${lang}</span>` : '';
                 return `<pre><code>${language}${escapedCode}</code></pre>`;
             });
@@ -170,8 +159,38 @@
             // 返回消息元素，用于后续定位滚动
             return messageDiv;
         }
+        
+        // --- 【v5.5 新增】手动平滑滚动函数 ---
+        function smoothScrollTo(element, targetScrollTop, duration = 300) {
+            const start = element.scrollTop;
+            const change = targetScrollTop - start;
+            const startTime = performance.now();
 
-        // --- 打字机效果函数 (完全禁用滚动) ---
+            function animateScroll(currentTime) {
+                const timeElapsed = currentTime - startTime;
+                const progress = Math.min(1, timeElapsed / duration);
+                
+                // 使用缓动函数 (Ease-out Cubic)
+                const easeProgress = progress < 0.5 ? 4 * progress * progress * progress : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+                
+                element.scrollTop = start + change * easeProgress;
+
+                if (timeElapsed < duration) {
+                    requestAnimationFrame(animateScroll);
+                } else {
+                    element.scrollTop = targetScrollTop; // 确保最终位置精确
+                    // 动画完成后，恢复 CSS 平滑滚动
+                    element.style.scrollBehavior = 'smooth';
+                }
+            }
+            
+            // 开始动画前，确保 CSS 平滑滚动是关闭的
+            element.style.scrollBehavior = 'auto'; 
+            requestAnimationFrame(animateScroll);
+        }
+        // ----------------------------------------------------
+
+        // --- 打字机效果函数 (保持不变) ---
         function startTyping(messageElement, rawText, delay = 3) { 
             return new Promise(resolve => {
                 let i = 0;
@@ -201,7 +220,7 @@
             });
         }
         
-        // --- 欢迎语的异步处理 (完全禁用滚动) ---
+        // --- 欢迎语的异步处理 (保持不变) ---
         function displayWelcomeMessage(welcomeMessageDiv, welcomeText) {
             let i = 0;
             const delay = 2; 
@@ -248,7 +267,7 @@
             }
         }
 
-        // --- 核心功能函数：sendMessage (即时平滑置顶，带偏移修正) ---
+        // --- 核心功能函数：sendMessage (JS 控制平滑精确置顶，无偏移) ---
         async function sendMessage() {
             const message = messageInput.value.trim();
             if (message === '') return;
@@ -266,36 +285,31 @@
 
             const finalMessage = message; 
 
-            // 1. 捕获用户消息元素 (消息出现在底部)
+            // 1. 捕获用户消息元素
             const userMessageDiv = appendMessage('user', message); 
             
-            // 【v5.3 修正】：设置临时滚动边距，创造 180px 偏移量
-            userMessageDiv.style.scrollMarginTop = '180px'; 
+            // 2. 【v5.6 核心逻辑】执行 JS 控制的平滑精确置顶
+            // OFFSET 设为 0，实现精确置顶到最顶部
+            const OFFSET = 0; 
             
-            // 【v5.2 修正】：引入 setTimeout，确保 DOM 稳定后再执行平滑置顶
-            setTimeout(() => {
-                // 确保 chatBox 仍存在且可滚动
-                if (userMessageDiv && chatBox.scrollHeight > chatBox.clientHeight) {
-                     userMessageDiv.scrollIntoView({ block: 'start', behavior: 'smooth' });
-                }
-                // 立即移除边距，避免影响页面布局
-                userMessageDiv.style.scrollMarginTop = ''; 
-            }, 50); 
+            if (chatBox.scrollHeight > chatBox.clientHeight) {
+                const targetScrollTop = userMessageDiv.offsetTop - OFFSET;
+                smoothScrollTo(chatBox, targetScrollTop); 
+            }
             
             messageInput.value = '';
             sendButton.disabled = true;
             messageInput.placeholder = 'AI 正在思考...';
             
-            // 2. 设置新的 AbortController
+            // 3. 设置新的 AbortController
             currentAbortController = new AbortController();
             const signal = currentAbortController.signal;
 
-            // 3. 创建呼吸思考框
+            // 4. 创建呼吸思考框
             const aiThinkingMessage = document.createElement('div');
             aiThinkingMessage.classList.add('message', 'ai-message', 'ai-thinking'); 
             chatBox.appendChild(aiThinkingMessage);
             
-            // 确保思考中消息出现在置顶操作完成后，视觉效果更平滑
             setTimeout(() => {
                 aiThinkingMessage.textContent = '思考中...'; 
             }, 100);
@@ -324,8 +338,6 @@
                     const aiMessageDiv = document.createElement('div');
                     aiMessageDiv.classList.add('message', 'ai-message');
                     chatBox.appendChild(aiMessageDiv);
-                    
-                    // 此处不需再做滚动
                     
                     await startTyping(aiMessageDiv, aiText); 
                     
