@@ -1,18 +1,17 @@
-// /functions/api/chat.js - 隔离所有外部依赖的最终调试版
+// /functions/api/chat.js - 最终稳定且启用对话记忆版本 (无调试代码)
 
 import { getConfig } from '../auth'; 
 
-const HISTORY_TTL = 3600 * 24; 
+const HISTORY_TTL = 3600 * 24; // 历史记录有效期 24 小时 (秒)
 const SESSION_COOKIE_NAME = 'chat_session_id';
 
-// 保持 getSessionData 函数定义不变，但我们不会调用它
+/**
+ * 从 Cookie 中获取或生成一个唯一的 Session ID，并设置 Set-Cookie 头部。
+ */
 function getSessionData(request) {
     const cookieHeader = request.headers.get('Cookie');
     let sessionId;
     let setCookieHeader = null;
-    
-    // ... (函数体不变) ...
-    // ... (为了简洁，此处省略了getSesionData的内部实现) ...
 
     if (cookieHeader) {
         const cookies = cookieHeader.split(';').map(c => c.trim().split('='));
@@ -23,7 +22,9 @@ function getSessionData(request) {
     }
     
     if (!sessionId) {
+        // 使用兼容性 ID 生成方法
         sessionId = (Date.now() + Math.random()).toString(36).replace('.', '');
+        
         const isSecure = request.url.startsWith('https://');
         setCookieHeader = `${SESSION_COOKIE_NAME}=${sessionId}; Max-Age=${HISTORY_TTL}; Path=/; HttpOnly; SameSite=Strict${isSecure ? '; Secure' : ''}`;
     }
@@ -39,22 +40,78 @@ export async function onRequest({ request, env }) {
         return new Response('Method Not Allowed', { status: 405 });
     }
 
-    // *** 隔离所有 I/O 和外部依赖 ***
-    const config = { apiUrl: 'DEBUG_URL', apiKey: 'DEBUG_KEY' }; 
-    const sessionId = "DEBUG-ID"; // 使用虚拟 ID
-    const setCookieHeader = null; // 确保不设置 Cookie
-    // **********************************
+    const config = await getConfig(env);
+    const { sessionId, setCookieHeader } = getSessionData(request);
 
     try {
-        // --- 测试点 A: 检查是否能成功运行到 try 块内 ---
-        const TEST_RESPONSE = new Response(JSON.stringify({ debug: "header_test_A_ok" }), { 
-            status: 501, 
-            headers: { 'X-Debug-A': 'CodeReachedHere' } 
-        });
-        return TEST_RESPONSE;
-        // ------------------------------------------------
+        const clientBody = await request.json();
+        let history = [];
 
-        // ... (以下代码现在不会运行) ...
+        // 1. 从 KV 加载历史记录 (env.HISTORY 绑定)
+        const historyJson = await env.HISTORY.get(sessionId);
+        if (historyJson) {
+            history = JSON.parse(historyJson);
+        }
+        
+        // 2. 构造完整的 contents 数组 (历史 + 当前问题)
+        const contents = [...history, ...clientBody.contents];
+
+        // 3. 构造 Gemini API 请求体
+        const geminiRequestBody = JSON.stringify({
+            contents: contents,
+        });
+
+        // 4. 准备 API 接口 URL
+        const url = `${config.apiUrl}?key=${config.apiKey}`; 
+
+        // 5. 转发请求到 Gemini API
+        const aiResponse = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: geminiRequestBody, 
+        });
+
+        // 6. 处理 AI 响应
+        if (aiResponse.ok) {
+            const aiData = await aiResponse.json();
+            const aiText = aiData.candidates?.[0]?.content?.parts?.[0]?.text;
+            
+            if (aiText) {
+                // 7. 更新历史记录并保存到 KV
+                const newUserMessage = clientBody.contents[0]; 
+                const newAiResponse = { role: 'model', parts: [{ text: aiText }] }; 
+                
+                history.push(newUserMessage, newAiResponse);
+                
+                await env.HISTORY.put(sessionId, JSON.stringify(history), { expirationTtl: HISTORY_TTL });
+            }
+            
+            // 8. 构造最终返回给客户端的响应对象 (成功路径)
+            const response = new Response(JSON.stringify(aiData), {
+                status: 200,
+                headers: { 'Content-Type': 'application/json' }
+            });
+
+            // 9. 确保 Session ID Cookie 被设置
+            if (setCookieHeader) {
+                response.headers.set('Set-Cookie', setCookieHeader);
+            }
+
+            return response;
+
+        } else {
+            // 10. 错误路径：确保 Set-Cookie 头部也被设置
+            const errorBody = await aiResponse.text();
+            const errorResponse = new Response(errorBody, {
+                status: aiResponse.status,
+                headers: { 'Content-Type': aiResponse.headers.get('Content-Type') || 'application/json' }
+            });
+            
+            if (setCookieHeader) {
+                errorResponse.headers.set('Set-Cookie', setCookieHeader);
+            }
+            return errorResponse;
+        }
 
     } catch (error) {
         console.error("AI Request Error:", error);
