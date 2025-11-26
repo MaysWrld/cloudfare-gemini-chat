@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="light dark"> 
-    <title>AI 助手 6.1 (清除对话)</title>
+    <title>AI 助手 6.2 (重新对话)</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2d000/svg' viewBox='0 0 100 100'><text y='-.1em' x='-.05em' font-size='90'>✨</text></svg>">
     <style>
         /* =================================================== */
@@ -66,7 +66,7 @@
             font-weight: 500; 
             display: flex; 
             align-items: center; 
-            justify-content: space-between; /* 确保标题和按钮分开 */
+            justify-content: space-between; 
             flex-shrink: 0; 
         }
         .header-title {
@@ -107,24 +107,22 @@
         #sendButton:hover { background-color: #1565c0; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); }
         #sendButton:disabled { background-color: #dadce0; cursor: not-allowed; }
 
-        /* V6.1 清除对话按钮样式 */
-        #clearChatButton {
+        /* V6.2 重新对话按钮样式 */
+        #restartChatButton {
             background: none;
             border: none;
             color: var(--text-main);
             cursor: pointer;
-            font-size: 1.5em; /* 确保图标清晰可见 */
+            font-size: 1.5em; 
             padding: 0;
             margin: 0;
             opacity: 0.7;
             transition: opacity 0.2s, transform 0.2s;
             outline: none;
-            /* 确保图标对齐标题基线 */
             line-height: 1;
-            /* 确保点击区域不触发意外的滚动 */
             flex-shrink: 0; 
         }
-        #clearChatButton:hover {
+        #restartChatButton:hover {
             opacity: 1;
             transform: scale(1.1);
         }
@@ -135,7 +133,7 @@
     <div class="chat-container">
         <div class="header">
             <span class="header-title">AI 助手 <span>✨</span></span>
-            <button id="clearChatButton" title="清除对话历史">🧹</button> 
+            <button id="restartChatButton" title="重新对话 (清除上下文)">🔄</button> 
         </div>
         <div class="chat-box" id="chatBox">
             </div>
@@ -150,8 +148,8 @@
         const messageInput = document.getElementById('messageInput');
         const sendButton = document.getElementById('sendButton');
         
-        // V6.1: 获取清除对话按钮
-        const clearChatButton = document.getElementById('clearChatButton');
+        // V6.2: 获取重新对话按钮
+        const restartChatButton = document.getElementById('restartChatButton');
         
         // --- 【全局状态】用于打断功能 ---
         let currentAbortController = null; 
@@ -261,8 +259,8 @@
             typeWelcome();
         }
 
-        // --- V6.1 核心函数：清除对话 ---
-        function clearChat() {
+        // --- V6.2 核心函数：重新对话 (清除上下文) ---
+        function restartChat() {
             // 1. 停止所有正在进行的任务
             stopAllTyping(); 
             if (currentAbortController) {
@@ -401,9 +399,9 @@
             }
         }
 
-        // --- 事件监听器：V6.1 增加了清除对话按钮的监听 ---
+        // --- 事件监听器 ---
         sendButton.addEventListener('click', sendMessage);
-        clearChatButton.addEventListener('click', clearChat); // <-- 新增监听器
+        restartChatButton.addEventListener('click', restartChat); // <-- V6.2 监听器
 
         messageInput.addEventListener('keydown', function(event) {
             if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
