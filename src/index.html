@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="light dark"> 
-    <title>AI 助手 4.3 (置顶修复与语言增强)</title>
+    <title>AI 助手 4.4 (AI 响应前置顶滚动)</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2d000/svg' viewBox='0 0 100 100'><text y='-.1em' x='-.05em' font-size='90'>✨</text></svg>">
     <style>
         /* =================================================== */
@@ -148,7 +148,7 @@
             return htmlText.replace(/\n/g, '<br>');
         }
 
-        // --- 核心功能函数：appendMessage (用户消息置顶滚动 - 已修复时序问题) ---
+        // --- 核心功能函数：appendMessage (返回元素，并处理非用户消息滚动) ---
         function appendMessage(sender, text) {
             const messageDiv = document.createElement('div');
             messageDiv.classList.add('message');
@@ -163,15 +163,12 @@
             
             chatBox.appendChild(messageDiv);
             
-            if (sender === 'user') {
-                // 【修复点】：使用 setTimeout(0) 确保在浏览器完成渲染周期后，offsetTop 值准确
-                setTimeout(() => {
-                    chatBox.scrollTop = messageDiv.offsetTop;
-                }, 0);
-            } else {
+            if (sender !== 'user') {
                 // 系统/AI 消息：滚动到底部，确保最新信息可见
                 chatBox.scrollTop = chatBox.scrollHeight; 
             }
+            // 【关键修改】：返回消息元素，用于后续定位滚动
+            return messageDiv;
         }
 
         // --- 打字机效果函数 (完全禁用滚动) ---
@@ -251,7 +248,7 @@
             }
         }
 
-        // --- 核心功能函数：sendMessage (包含打断功能) ---
+        // --- 核心功能函数：sendMessage (AI 响应前置顶滚动) ---
         async function sendMessage() {
             const message = messageInput.value.trim();
             if (message === '') return;
@@ -267,16 +264,17 @@
             }
             // ----------------------------------------
 
-            // --- 语言自适应逻辑 (已增强) ---
+            // --- 语言自适应逻辑 ---
             const detectedLang = detectLanguage(message);
             const langInstruction = detectedLang === 'Chinese' 
-                ? "【语言指令：请严格只使用中文回复此查询】。即使查询内容包含少量英文，也必须用中文作答。请勿使用任何英文词汇。" // 【增强点】
+                ? "【语言指令：请严格只使用中文回复此查询】。即使查询内容包含少量英文，也必须用中文作答。请勿使用任何英文词汇。"
                 : "Strictly use English to respond to this query. Respond only in English.";
             
             const finalMessage = `${langInstruction}\n\n用户查询/User Query: ${message}`;
             // ------------------------------------
 
-            appendMessage('user', message); // 1. 用户消息滚动到顶部 (通过 setTimeout 保证)
+            // 【关键修改】：捕获用户消息元素
+            const userMessageDiv = appendMessage('user', message); 
             
             messageInput.value = '';
             sendButton.disabled = true;
@@ -291,7 +289,7 @@
             aiThinkingMessage.classList.add('message', 'ai-message', 'ai-thinking'); 
             aiThinkingMessage.textContent = '思考中...'; 
             chatBox.appendChild(aiThinkingMessage);
-            // chatBox.scrollTop = chatBox.scrollHeight; // 【修复点】：移除此行，保留用户消息置顶位置
+            // 此时不滚动，AI 思考框可能在屏幕下方
             // ...
 
             try {
@@ -319,7 +317,9 @@
                     aiMessageDiv.classList.add('message', 'ai-message');
                     chatBox.appendChild(aiMessageDiv);
                     
-                    // 4. 开始打字：不滚动
+                    // 【关键修改】：在打字开始前，将用户消息滚动到顶部，确保上下文可见
+                    chatBox.scrollTop = userMessageDiv.offsetTop;
+                    
                     await startTyping(aiMessageDiv, aiText); 
                     
                 } else {
