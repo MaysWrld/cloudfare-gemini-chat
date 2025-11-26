@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="light dark"> 
-    <title>AI 助手 4.6 (移除语言指令，保留精准置顶)</title>
+    <title>AI 助手 4.7 (使用 scrollIntoView 终极修复置顶)</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2d000/svg' viewBox='0 0 100 100'><text y='-.1em' x='-.05em' font-size='90'>✨</text></svg>">
     <style>
         /* =================================================== */
@@ -248,7 +248,7 @@
             }
         }
 
-        // --- 核心功能函数：sendMessage (移除语言指令) ---
+        // --- 核心功能函数：sendMessage (使用 scrollIntoView 修复置顶) ---
         async function sendMessage() {
             const message = messageInput.value.trim();
             if (message === '') return;
@@ -264,7 +264,7 @@
             }
             // ----------------------------------------
 
-            // --- 【关键修改】：移除强制语言指令，直接使用用户消息 ---
+            // --- 移除强制语言指令，直接使用用户消息 ---
             const finalMessage = message; 
             // ------------------------------------
 
@@ -311,14 +311,8 @@
                     aiMessageDiv.classList.add('message', 'ai-message');
                     chatBox.appendChild(aiMessageDiv);
                     
-                    // 【置顶修复逻辑】：临时禁用平滑滚动，强制精准定位
-                    chatBox.style.scrollBehavior = 'auto';
-                    chatBox.scrollTop = userMessageDiv.offsetTop;
-                    
-                    // 恢复平滑滚动，确保用户手动滚动时体验正常
-                    requestAnimationFrame(() => {
-                        chatBox.style.scrollBehavior = 'smooth';
-                    });
+                    // 【终极修复】：使用 scrollIntoView 将用户消息置于顶部
+                    userMessageDiv.scrollIntoView({ block: 'start' });
                     
                     await startTyping(aiMessageDiv, aiText); 
                     
