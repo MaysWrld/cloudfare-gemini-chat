@@ -1,51 +1,95 @@
-// /functions/api/chat.js - 适用于 Gemini API 的最终完整版本
+// /functions/api/chat.js - 启用对话记忆版本
 
 import { getConfig } from '../auth'; 
 
+const HISTORY_TTL = 3600 * 24; // 历史记录有效期 24 小时 (秒)
+const SESSION_COOKIE_NAME = 'chat_session_id';
+
+/**
+ * 从 Cookie 中获取或生成一个唯一的 Session ID
+ */
+function getSessionId(request) {
+    const cookieHeader = request.headers.get('Cookie');
+    if (cookieHeader) {
+        const cookies = cookieHeader.split(';').map(c => c.trim().split('='));
+        const sessionId = cookies.find(([name]) => name === SESSION_COOKIE_NAME)?.[1];
+        if (sessionId) return sessionId;
+    }
+    // 如果没有，生成一个新的 UUID (简易版)
+    return crypto.randomUUID(); 
+}
+
 /**
  * Pages Function 入口
- * 处理 /api/chat 路由上的请求，并将请求代理到配置的 AI 模型接口。
  */
 export async function onRequest({ request, env }) {
-    // 1. 检查请求方法
     if (request.method !== 'POST') {
         return new Response('Method Not Allowed', { status: 405 });
     }
 
-    // 2. 获取配置
-    // 注意：/api/chat 是一个公开接口，不应该在这里做认证检查
     const config = await getConfig(env);
-    
-    // 检查是否有配置信息，特别是 API Key
-    if (!config.apiKey || !config.apiUrl) {
-        return new Response(JSON.stringify({ 
-            error: "API 接口或密钥未配置，请访问 /admin.html 进行设置。", 
-            status: 400 
-        }), { 
-            status: 400, 
-            headers: { 'Content-Type': 'application/json' } 
-        });
-    }
+    const sessionId = getSessionId(request);
 
     try {
-        // *** 核心代理逻辑 ***
-        
-        // Gemini API 认证要求 Key 必须作为查询参数 'key' 附加在 URL 上。
-        const url = `${config.apiUrl}?key=${config.apiKey}`; 
+        const clientBody = await request.json();
+        let history = [];
 
-        // 转发请求到 AI 模型 API
-        const aiResponse = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                // *** 关键：不设置 Authorization 头部 ***
-            },
-            // 使用 request.body 转发客户端发送的 JSON 内容
-            body: request.body, 
+        // 1. 从 KV 加载历史记录 (使用新的 env.HISTORY 绑定)
+        const historyJson = await env.HISTORY.get(sessionId);
+        if (historyJson) {
+            history = JSON.parse(historyJson);
+        }
+        
+        // 2. 构造完整的 contents 数组 (历史 + 当前问题)
+        // 确保 contents 数组中的每一个元素都有 role 和 parts 字段
+        const contents = [...history, ...clientBody.contents];
+
+        // 3. 构造 Gemini API 请求体 (使用完整的 history)
+        const geminiRequestBody = JSON.stringify({
+            contents: contents,
         });
 
-        // 返回 AI 接口的原始响应（包括状态码、头部和内容）
-        return aiResponse; 
+        const url = `${config.apiUrl}?key=${config.apiKey}`; 
+
+        // 4. 转发请求到 Gemini API
+        const aiResponse = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: geminiRequestBody, 
+        });
+
+        // 5. 处理 AI 响应
+        if (aiResponse.ok) {
+            const aiData = await aiResponse.json();
+            const aiText = aiData.candidates?.[0]?.content?.parts?.[0]?.text;
+            
+            if (aiText) {
+                // 6. 更新历史记录并保存到 KV
+                const newUserMessage = clientBody.contents[0];
+                const newAiResponse = { role: 'model', parts: [{ text: aiText }] };
+                
+                history.push(newUserMessage, newAiResponse);
+                
+                // 将更新后的历史记录写回 KV (设置有效期)
+                await env.HISTORY.put(sessionId, JSON.stringify(history), { expirationTtl: HISTORY_TTL });
+            }
+            
+            // 7. 返回 Gemini API 的原始响应，但附带设置 Session ID 的头部
+            const response = new Response(JSON.stringify(aiData), {
+                status: 200,
+                headers: { 'Content-Type': 'application/json' }
+            });
+
+            // 设置 Session ID Cookie
+            const cookie = `${SESSION_COOKIE_NAME}=${sessionId}; Max-Age=${HISTORY_TTL}; Path=/; HttpOnly; SameSite=Strict`;
+            response.headers.set('Set-Cookie', cookie);
+
+            return response;
+
+        } else {
+            // 8. 转发错误响应
+            return aiResponse; 
+        }
 
     } catch (error) {
         console.error("AI Request Error:", error);
