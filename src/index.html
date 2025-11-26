@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="light dark"> 
-    <title>AI 助手 3.6 (加速版)</title>
+    <title>AI 助手 3.7 (语言自适应)</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='-.1em' x='-.05em' font-size='90'>✨</text></svg>">
     <style>
         /* =================================================== */
@@ -106,6 +106,24 @@
         const messageInput = document.getElementById('messageInput');
         const sendButton = document.getElementById('sendButton');
         
+        // --- 【新增】语言检测函数 ---
+        function detectLanguage(text) {
+            // 移除空白字符
+            const trimmedText = text.replace(/\s/g, '');
+            if (trimmedText.length === 0) return 'Unknown';
+
+            // 检查中文字符（Unicode 范围 4E00-9FFF 是 CJK 统一汉字）
+            const chineseMatch = text.match(/[\u4e00-\u9fff]/g);
+            
+            // 如果中文字符数超过总非空白字符的 30%，则认为是中文
+            if (chineseMatch && chineseMatch.length / trimmedText.length > 0.3) {
+                return 'Chinese';
+            }
+
+            // 否则默认为英文（或混合/其他语言，但以英文指令为主）
+            return 'English';
+        }
+
         // --- 辅助函数：Markdown 渲染 (保持不变) ---
         function renderMarkdown(text) {
             let htmlText = text;
@@ -143,8 +161,8 @@
             chatBox.scrollTop = chatBox.scrollHeight;
         }
 
-        // --- 打字机效果函数 (默认延迟从 30ms 降至 10ms) ---
-        function startTyping(messageElement, rawText, delay = 10) { // 【调整】默认延迟为 10ms
+        // --- 打字机效果函数 (延迟 10ms) ---
+        function startTyping(messageElement, rawText, delay = 10) { 
             return new Promise(resolve => {
                 let i = 0;
                 const cursor = '<span style="opacity: 0.8; margin-left: 2px; color: var(--text-main);">▋</span>'; 
@@ -174,10 +192,10 @@
             });
         }
         
-        // --- 欢迎语的异步处理 (延迟从 20ms 降至 7ms) ---
+        // --- 欢迎语的异步处理 (延迟 7ms) ---
         function displayWelcomeMessage(welcomeMessageDiv, welcomeText) {
             let i = 0;
-            const delay = 7; // 【调整】延迟为 7ms
+            const delay = 7;
             const cursor = '<span style="opacity: 0.8; margin-left: 2px; color: var(--text-main);">▋</span>'; 
             
             function typeWelcome() {
@@ -221,10 +239,20 @@
             }
         }
 
-        // --- 核心功能函数：sendMessage ---
+        // --- 核心功能函数：sendMessage (已集成语言自适应) ---
         async function sendMessage() {
             const message = messageInput.value.trim();
             if (message === '') return;
+
+            // --- 【关键修复】语言自适应逻辑 ---
+            const detectedLang = detectLanguage(message);
+            const langInstruction = detectedLang === 'Chinese' 
+                ? "请严格使用中文回复此查询。如果用户使用多语言，则以用户主要语言或指令语言为准。始终避免使用英文，除非用户明确输入英文内容。" 
+                : "Strictly use English to respond to this query. If the user uses multiple languages, prioritize the response in English.";
+            
+            // 构建发送给 API 的最终消息内容，将指令放在前面
+            const finalMessage = `${langInstruction}\n\n用户查询/User Query: ${message}`;
+            // ------------------------------------
 
             appendMessage('user', message); 
             
@@ -245,7 +273,7 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        contents: [{ role: "user", parts: [{ text: message }] }]
+                        contents: [{ role: "user", parts: [{ text: finalMessage }] }] // 【发送最终指令消息】
                     })
                 });
 
