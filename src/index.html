@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI 助手</title>
+    <title>AI 助手 2.0</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -108,17 +108,23 @@
         function appendMessage(sender, text) {
             const messageDiv = document.createElement('div');
             messageDiv.classList.add('message');
+            
             if (sender === 'user') {
                 messageDiv.classList.add('user-message');
+                // 【已修复】确保用户输入显示纯文本
+                messageDiv.textContent = text; 
+                
             } else if (sender === 'ai') {
                 messageDiv.classList.add('ai-message');
                 // 简单的Markdown到HTML转换
                 text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
                 text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
                 messageDiv.innerHTML = text.replace(/\n/g, '<br>');
+                
             } else {
                  messageDiv.innerHTML = text;
             }
+            
             chatBox.appendChild(messageDiv);
             // 滚动到底部
             chatBox.scrollTop = chatBox.scrollHeight;
@@ -126,7 +132,6 @@
 
         async function fetchConfig() {
             try {
-                // 假设存在 /api/config 接口来获取欢迎语
                 const response = await fetch('/api/config');
                 if (response.ok) {
                     const config = await response.json();
@@ -143,7 +148,7 @@
             const message = messageInput.value.trim();
             if (message === '') return;
 
-            // 1. 在聊天框显示用户消息 <--- 修复的关键点
+            // 1. 在聊天框显示用户消息
             appendMessage('user', message); 
             
             // 2. 清空输入框，并设置状态
