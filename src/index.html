@@ -3,86 +3,76 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI 助手 2.0</title>
+    <title>AI 助手 3.0</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='-.1em' x='-.05em' font-size='90'>✨</text></svg>">
     <style>
         /* 基础样式和全局重置 */
         body {
-            font-family: 'Google Sans', 'Roboto', Arial, sans-serif; /* 尝试使用 Google 字体 */
+            font-family: 'Google Sans', 'Roboto', Arial, sans-serif;
             margin: 0;
             padding: 0;
-            background-color: #f0f4f9; /* 柔和的浅蓝色背景 */
+            background-color: #f0f4f9;
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            color: #3c4043; /* 默认文字颜色 */
-            overflow: hidden; /* 防止滚动条出现在 body */
+            color: #3c4043;
+            overflow: hidden;
         }
-
-        /* 聊天容器 - 模仿 Gemini 的卡片式布局 */
         .chat-container {
-            width: 95%; /* 稍微宽一些 */
-            max-width: 960px; /* 更宽的最大宽度 */
+            width: 95%;
+            max-width: 960px;
             background-color: #ffffff;
-            border-radius: 28px; /* 更大的圆角 */
-            box-shadow: 0 8px 24px rgba(60, 64, 67, 0.15); /* 更柔和的阴影 */
+            border-radius: 28px;
+            box-shadow: 0 8px 24px rgba(60, 64, 67, 0.15);
             display: flex;
             flex-direction: column;
-            height: 90vh; /* 更高的容器 */
+            height: 90vh;
             min-height: 600px;
-            overflow: hidden; /* 确保内容不溢出 */
+            overflow: hidden;
         }
-
-        /* 头部 - 移除导航，只保留标题 */
         .header {
             padding: 16px 24px;
-            background-color: #ffffff; /* 白色背景 */
-            border-bottom: 1px solid #e8eaed; /* 浅灰色分隔线 */
-            color: #202124; /* 深灰色标题 */
-            text-align: left; /* 标题左对齐 */
-            font-size: 1.5em; /* 稍大标题 */
-            font-weight: 500; /* 中等粗细 */
-            display: flex; /* 确保标题在行内居中 */
+            background-color: #ffffff;
+            border-bottom: 1px solid #e8eaed;
+            color: #202124;
+            font-size: 1.5em;
+            font-weight: 500;
+            display: flex;
             align-items: center;
-            justify-content: space-between; /* 用于未来可能的右侧按钮 */
+            justify-content: space-between;
         }
-
-        /* 聊天消息显示区域 */
         .chat-box {
             flex-grow: 1;
-            padding: 20px 24px; /* 左右内边距更大 */
+            padding: 20px 24px;
             overflow-y: auto;
             display: flex;
             flex-direction: column;
-            gap: 16px; /* 消息之间更大间距 */
-            scroll-behavior: smooth; /* 平滑滚动 */
+            gap: 16px;
+            scroll-behavior: smooth;
         }
-
-        /* 单条消息气泡 */
         .message {
-            padding: 12px 18px; /* 消息内边距 */
-            border-radius: 20px; /* 柔和圆角 */
-            max-width: 80%; /* 消息最大宽度 */
+            padding: 12px 18px;
+            border-radius: 20px;
+            max-width: 80%;
             line-height: 1.6;
             word-wrap: break-word;
             font-size: 0.95em;
-            color: #202124; /* 消息文字颜色 */
+            color: #202124;
         }
-        /* 用户消息 */
         .user-message {
             align-self: flex-end;
-            background-color: #e6f4ea; /* 柔和的绿色背景 */
+            background-color: #e6f4ea;
         }
-        /* AI 消息 */
         .ai-message {
             align-self: flex-start;
-            background-color: #f1f3f4; /* 浅灰色背景 */
+            background-color: #f1f3f4;
+            /* 确保 AI 消息内部的格式化元素有空间 */
+            padding-bottom: 5px; 
         }
-        /* 系统消息 (例如错误) */
         .system-message {
             align-self: center;
-            background-color: #fff2e0; /* 柔和的橙色背景 */
+            background-color: #fff2e0;
             color: #ea8600;
             font-size: 0.85em;
             text-align: center;
@@ -91,68 +81,82 @@
             max-width: 60%;
         }
 
-        /* 输入区域 - 模仿 Gemini 的浮动输入框 */
+        /* --- Markdown 样式增强 --- */
+        .ai-message pre {
+            background-color: #e8e8e8;
+            padding: 10px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin-top: 10px;
+            font-family: Consolas, Monaco, 'Courier New', monospace;
+            font-size: 0.9em;
+            white-space: pre-wrap; /* 允许代码块换行 */
+        }
+        .ai-message pre code {
+            display: block;
+            padding-left: 0;
+        }
+        .ai-message h2 {
+            font-size: 1.2em;
+            font-weight: 600;
+            margin-top: 15px;
+            margin-bottom: 5px;
+            color: #1a73e8; /* 标题使用谷歌蓝 */
+        }
+        .ai-message ul {
+            padding-left: 20px;
+            margin-top: 5px;
+            margin-bottom: 5px;
+            list-style: disc;
+        }
+        .ai-message strong {
+            font-weight: 700;
+        }
+
+        /* 输入区域样式保持不变 */
         .input-area {
             display: flex;
             padding: 16px 24px;
-            border-top: 1px solid #e8eaed; /* 浅灰色分隔线 */
-            background-color: #ffffff; /* 确保输入区域背景是白色 */
+            border-top: 1px solid #e8eaed;
+            background-color: #ffffff;
             align-items: center;
-            gap: 10px; /* 输入框和按钮间距 */
+            gap: 10px;
         }
-        /* 消息输入框 */
         #messageInput {
             flex-grow: 1;
             padding: 12px 18px;
-            border: 1px solid #dadce0; /* 浅灰色边框 */
-            border-radius: 24px; /* 圆角输入框 */
+            border: 1px solid #dadce0;
+            border-radius: 24px;
             font-size: 1em;
-            outline: none; /* 移除默认焦点边框 */
+            outline: none;
             transition: border-color 0.2s, box-shadow 0.2s;
-            background-color: #f8f9fa; /* 稍微深一点的背景 */
+            background-color: #f8f9fa;
         }
         #messageInput:focus {
-            border-color: #8ab4f8; /* 焦点时边框颜色 */
-            box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.2); /* 焦点时柔和阴影 */
-            background-color: #ffffff; /* 焦点时白色背景 */
+            border-color: #8ab4f8;
+            box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.2);
+            background-color: #ffffff;
         }
-        /* 发送按钮 */
         #sendButton {
             padding: 12px 20px;
-            background-color: #1a73e8; /* 谷歌蓝 */
+            background-color: #1a73e8;
             color: white;
             border: none;
-            border-radius: 24px; /* 圆角按钮 */
+            border-radius: 24px;
             cursor: pointer;
             font-size: 1em;
             transition: background-color 0.3s, box-shadow 0.3s;
-            display: flex; /* 确保图标和文本对齐 */
+            display: flex;
             align-items: center;
             justify-content: center;
         }
         #sendButton:hover {
-            background-color: #1565c0; /* 较深的谷歌蓝 */
+            background-color: #1565c0;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
         }
         #sendButton:disabled {
-            background-color: #dadce0; /* 禁用颜色 */
+            background-color: #dadce0;
             cursor: not-allowed;
-        }
-
-        /* 滚动条美化 (Webkit 浏览器) */
-        .chat-box::-webkit-scrollbar {
-            width: 8px;
-        }
-        .chat-box::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 10px;
-        }
-        .chat-box::-webkit-scrollbar-thumb {
-            background: #888;
-            border-radius: 10px;
-        }
-        .chat-box::-webkit-scrollbar-thumb:hover {
-            background: #555;
         }
     </style>
 </head>
@@ -160,7 +164,8 @@
 
     <div class="chat-container">
         <div class="header">
-            AI 助手 <span>✨</span> </div>
+            AI 助手 <span>✨</span>
+        </div>
         <div class="chat-box" id="chatBox">
             </div>
         <div class="input-area">
@@ -182,18 +187,39 @@
             
             if (sender === 'user') {
                 messageDiv.classList.add('user-message');
-                messageDiv.textContent = text; // 用户输入显示纯文本
+                messageDiv.textContent = text; 
                 
             } else if (sender === 'ai') {
                 messageDiv.classList.add('ai-message');
-                // 简单的Markdown到HTML转换
-                text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-                text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
-                messageDiv.innerHTML = text.replace(/\n/g, '<br>'); // AI回复支持Markdown
+                
+                // --- 增强 Markdown 渲染逻辑 ---
+                let htmlText = text;
+
+                // 1. 替换代码块
+                htmlText = htmlText.replace(/```(\w*)\n([\s\S]*?)```/g, function(match, lang, code) {
+                    const escapedCode = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                    const language = lang ? `<span class="code-lang" style="font-size: 0.8em; color: #4285f4; display: block; margin-bottom: 5px;">${lang}</span>` : '';
+                    return `<pre><code>${language}${escapedCode}</code></pre>`;
+                });
+
+                // 2. 替换标题 (H2)
+                htmlText = htmlText.replace(/^## (.*$)/gim, '<h2>$1</h2>');
+                
+                // 3. 替换无序列表 (简单处理)
+                htmlText = htmlText.replace(/^\* (.*$)/gim, '<ul><li>$1</li></ul>');
+                htmlText = htmlText.replace(/<\/li>\n<ul>/gim, '</li>'); 
+                htmlText = htmlText.replace(/<\/ul>(\n<ul>)?/gim, '</ul>');
+                
+                // 4. 替换加粗和斜体
+                htmlText = htmlText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                htmlText = htmlText.replace(/\*(.*?)\*/g, '<em>$1</em>');
+                
+                // 5. 替换普通换行符为 <br>
+                messageDiv.innerHTML = htmlText.replace(/\n/g, '<br>');
                 
             } else {
-                messageDiv.classList.add('system-message'); // 新增系统消息样式
-                messageDiv.innerHTML = text; // 系统消息可包含简单HTML
+                messageDiv.classList.add('system-message');
+                messageDiv.innerHTML = text;
             }
             
             chatBox.appendChild(messageDiv);
@@ -202,7 +228,6 @@
 
         async function fetchConfig() {
             try {
-                // 假设存在 /api/config 接口来获取欢迎语
                 const response = await fetch('/api/config');
                 if (response.ok) {
                     const config = await response.json();
@@ -219,16 +244,16 @@
             const message = messageInput.value.trim();
             if (message === '') return;
 
-            appendMessage('user', message); // 显示用户输入
+            appendMessage('user', message);
             
-            messageInput.value = ''; // 清空输入框
+            messageInput.value = '';
             sendButton.disabled = true;
             messageInput.placeholder = 'AI 正在思考...';
             
             // 显示 AI 占位符
             const aiThinkingMessage = document.createElement('div');
             aiThinkingMessage.classList.add('message', 'ai-message');
-            aiThinkingMessage.textContent = '思考中...'; // 更友好的占位符
+            aiThinkingMessage.textContent = '思考中...';
             chatBox.appendChild(aiThinkingMessage);
             chatBox.scrollTop = chatBox.scrollHeight;
 
@@ -251,16 +276,16 @@
                 
                 if (response.ok) {
                     const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-                    aiThinkingMessage.remove(); // 移除占位符
+                    aiThinkingMessage.remove();
                     appendMessage('ai', aiText || '抱歉，AI 返回了空响应。');
                 } else {
-                    aiThinkingMessage.remove(); // 移除占位符
+                    aiThinkingMessage.remove();
                     const errorMessage = data.error ? `AI 接口错误：${data.error.message || data.error}` : `请求失败，状态码：${response.status}`;
-                    appendMessage('system', `AI 助手：${errorMessage}`); // 统一系统错误显示
+                    appendMessage('system', `AI 助手：${errorMessage}`);
                 }
 
             } catch (error) {
-                aiThinkingMessage.remove(); // 移除占位符
+                aiThinkingMessage.remove();
                 appendMessage('system', '网络连接失败，请检查您的网络。');
                 console.error('Chat error:', error);
             } finally {
@@ -273,7 +298,7 @@
         sendButton.addEventListener('click', sendMessage);
         messageInput.addEventListener('keydown', function(event) {
             if (event.key === 'Enter' && !event.shiftKey) {
-                event.preventDefault(); // 阻止在输入框中创建新行
+                event.preventDefault();
                 sendMessage();
             }
         });
