@@ -1,4 +1,4 @@
-// /functions/api/chat.js - 最终稳定且启用对话记忆版本
+// /functions/api/chat.js - 启用对话记忆版本 (带测试点 A)
 
 import { getConfig } from '../auth'; 
 
@@ -7,7 +7,6 @@ const SESSION_COOKIE_NAME = 'chat_session_id';
 
 /**
  * 从 Cookie 中获取或生成一个唯一的 Session ID，并设置 Set-Cookie 头部。
- * @returns {{ sessionId: string, setCookieHeader: string | null }}
  */
 function getSessionData(request) {
     const cookieHeader = request.headers.get('Cookie');
@@ -24,7 +23,6 @@ function getSessionData(request) {
     
     // 如果没有或无效，则生成一个新的
     if (!sessionId) {
-        // 使用更具兼容性的ID生成方法 (修复点)
         sessionId = (Date.now() + Math.random()).toString(36).replace('.', '');
         
         // 构造 Set-Cookie 头部
@@ -44,10 +42,17 @@ export async function onRequest({ request, env }) {
     }
 
     const config = await getConfig(env);
-    // 获取或生成 Session ID 和 Set-Cookie 头部
     const { sessionId, setCookieHeader } = getSessionData(request);
 
     try {
+        // --- 测试点 A: 检查是否能成功运行到 try 块内 ---
+        const TEST_RESPONSE = new Response(JSON.stringify({ debug: "header_test_A_ok" }), { 
+            status: 501, 
+            headers: { 'X-Debug-A': 'CodeReachedHere' } 
+        });
+        return TEST_RESPONSE;
+        // ------------------------------------------------
+
         const clientBody = await request.json();
         let history = [];
 
@@ -97,7 +102,7 @@ export async function onRequest({ request, env }) {
                 headers: { 'Content-Type': 'application/json' }
             });
 
-            // 9. 确保 Session ID Cookie 被设置 (修复点：无论成功失败，只要需要就设置)
+            // 9. 确保 Session ID Cookie 被设置
             if (setCookieHeader) {
                 response.headers.set('Set-Cookie', setCookieHeader);
             }
@@ -106,15 +111,13 @@ export async function onRequest({ request, env }) {
 
         } else {
             // 10. 如果 AI API 返回错误状态（非 200/ok）
-            
-            // 复制错误响应的内容和状态
             const errorBody = await aiResponse.text();
             const errorResponse = new Response(errorBody, {
                 status: aiResponse.status,
                 headers: { 'Content-Type': aiResponse.headers.get('Content-Type') || 'application/json' }
             });
             
-            // 确保 Session ID Cookie 被设置 (修复点：即使是错误响应，也要建立会话)
+            // 确保 Session ID Cookie 被设置
             if (setCookieHeader) {
                 errorResponse.headers.set('Set-Cookie', setCookieHeader);
             }
