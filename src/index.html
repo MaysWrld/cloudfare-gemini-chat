@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="light dark"> 
-    <title>AI 助手 3.9 (极限加速版)</title>
+    <title>AI 助手 4.0 (禁用自动滚动)</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='-.1em' x='-.05em' font-size='90'>✨</text></svg>">
     <style>
         /* =================================================== */
@@ -148,7 +148,7 @@
             return htmlText.replace(/\n/g, '<br>');
         }
 
-        // --- 核心功能函数：appendMessage (保持不变) ---
+        // --- 核心功能函数：appendMessage (保持自动滚动，确保新消息可见) ---
         function appendMessage(sender, text) {
             const messageDiv = document.createElement('div');
             messageDiv.classList.add('message');
@@ -162,11 +162,11 @@
             }
             
             chatBox.appendChild(messageDiv);
-            chatBox.scrollTop = chatBox.scrollHeight;
+            chatBox.scrollTop = chatBox.scrollHeight; // 保留：确保用户发送消息或系统消息出现时，页面自动滚动
         }
 
-        // --- 打字机效果函数 (默认延迟从 10ms 降至 3ms) ---
-        function startTyping(messageElement, rawText, delay = 3) { // 【调整】默认延迟为 3ms
+        // --- 打字机效果函数 (移除自动滚动) ---
+        function startTyping(messageElement, rawText, delay = 3) { 
             return new Promise(resolve => {
                 let i = 0;
                 const cursor = '<span style="opacity: 0.8; margin-left: 2px; color: var(--text-main);">▋</span>'; 
@@ -177,7 +177,7 @@
                             const currentText = rawText.substring(0, i + 1);
                             messageElement.innerHTML = renderMarkdown(currentText) + cursor;
                             
-                            chatBox.scrollTop = chatBox.scrollHeight;
+                            // chatBox.scrollTop = chatBox.scrollHeight; // 【移除】：禁用打字过程中的自动滚动
                             i++;
                             const timerId = setTimeout(type, delay);
                             typingTimerIds.push(timerId); 
@@ -188,7 +188,7 @@
                         }
                     } else {
                         messageElement.innerHTML = renderMarkdown(rawText);
-                        chatBox.scrollTop = chatBox.scrollHeight;
+                        chatBox.scrollTop = chatBox.scrollHeight; // 结束时滚动到底部，确保完整回复可见
                         resolve();
                     }
                 }
@@ -197,17 +197,17 @@
             });
         }
         
-        // --- 欢迎语的异步处理 (延迟从 7ms 降至 2ms) ---
+        // --- 欢迎语的异步处理 (移除自动滚动) ---
         function displayWelcomeMessage(welcomeMessageDiv, welcomeText) {
             let i = 0;
-            const delay = 2; // 【调整】延迟为 2ms
+            const delay = 2; 
             const cursor = '<span style="opacity: 0.8; margin-left: 2px; color: var(--text-main);">▋</span>'; 
             
             function typeWelcome() {
                 if (i < welcomeText.length) {
                     try {
                         welcomeMessageDiv.innerHTML = renderMarkdown(welcomeText.substring(0, i + 1)) + cursor;
-                        chatBox.scrollTop = chatBox.scrollHeight;
+                        // chatBox.scrollTop = chatBox.scrollHeight; // 【移除】：禁用打字过程中的自动滚动
                         i++;
                         const timerId = setTimeout(typeWelcome, delay);
                         typingTimerIds.push(timerId); 
@@ -217,6 +217,7 @@
                     }
                 } else {
                     welcomeMessageDiv.innerHTML = renderMarkdown(welcomeText);
+                    chatBox.scrollTop = chatBox.scrollHeight; // 结束时滚动到底部
                 }
             }
             typeWelcome();
@@ -270,7 +271,7 @@
             const finalMessage = `${langInstruction}\n\n用户查询/User Query: ${message}`;
             // ------------------------------------
 
-            appendMessage('user', message); 
+            appendMessage('user', message); // appendMessage 会自动滚动到用户消息
             
             messageInput.value = '';
             sendButton.disabled = true;
@@ -285,8 +286,8 @@
             aiThinkingMessage.classList.add('message', 'ai-message', 'ai-thinking'); 
             aiThinkingMessage.textContent = '思考中...'; 
             chatBox.appendChild(aiThinkingMessage);
-            chatBox.scrollTop = chatBox.scrollHeight;
-
+            chatBox.scrollTop = chatBox.scrollHeight; // 确保滚动到思考框
+            // ...
 
             try {
                 const response = await fetch('/api/chat', {
