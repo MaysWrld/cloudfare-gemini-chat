@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="light dark"> 
-    <title>AI 助手 4.8 (恢复平滑置顶动画)</title>
+    <title>AI 助手 4.9 (即时平滑置顶)</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2d000/svg' viewBox='0 0 100 100'><text y='-.1em' x='-.05em' font-size='90'>✨</text></svg>">
     <style>
         /* =================================================== */
@@ -248,7 +248,7 @@
             }
         }
 
-        // --- 核心功能函数：sendMessage (使用 scrollIntoView 修复置顶) ---
+        // --- 核心功能函数：sendMessage (即时平滑置顶) ---
         async function sendMessage() {
             const message = messageInput.value.trim();
             if (message === '') return;
@@ -264,12 +264,13 @@
             }
             // ----------------------------------------
 
-            // --- 移除强制语言指令，直接使用用户消息 ---
             const finalMessage = message; 
-            // ------------------------------------
 
             // 1. 捕获用户消息元素
             const userMessageDiv = appendMessage('user', message); 
+            
+            // 【关键修改】：在发送后立即，使用平滑动画将用户消息置于顶部
+            userMessageDiv.scrollIntoView({ block: 'start', behavior: 'smooth' });
             
             messageInput.value = '';
             sendButton.disabled = true;
@@ -284,8 +285,8 @@
             aiThinkingMessage.classList.add('message', 'ai-message', 'ai-thinking'); 
             aiThinkingMessage.textContent = '思考中...'; 
             chatBox.appendChild(aiThinkingMessage);
-            // ...
-
+            // 此时不进行滚动，因为置顶已经在上一步完成了
+            
             try {
                 const response = await fetch('/api/chat', {
                     method: 'POST',
@@ -311,9 +312,9 @@
                     aiMessageDiv.classList.add('message', 'ai-message');
                     chatBox.appendChild(aiMessageDiv);
                     
-                    // 【关键修复】：使用 scrollIntoView，并加入 'smooth' 动画效果
-                    userMessageDiv.scrollIntoView({ block: 'start', behavior: 'smooth' });
-                    
+                    // 注意：AI 消息出现后，聊天框会因为 CSS 的 scroll-behavior: smooth 自动滚动到底部。
+                    // 这一步不需要额外的滚动指令。
+
                     await startTyping(aiMessageDiv, aiText); 
                     
                 } else {
