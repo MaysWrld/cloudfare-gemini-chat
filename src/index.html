@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="light dark"> 
-    <title>AI 助手 4.9 (即时平滑置顶)</title>
+    <title>AI 助手 5.0 (核心版，无自定义指令/滚动)</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2d000/svg' viewBox='0 0 100 100'><text y='-.1em' x='-.05em' font-size='90'>✨</text></svg>">
     <style>
         /* =================================================== */
@@ -57,7 +57,7 @@
         body { font-family: 'Google Sans', 'Roboto', Arial, sans-serif; background-color: var(--bg-main); display: flex; justify-content: center; align-items: center; color: var(--text-main); }
         .chat-container { width: 100%; height: 100%; max-width: 960px; background-color: var(--bg-card); border-radius: 0; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2); display: flex; flex-direction: column; min-height: initial; overflow: hidden; }
         @media (min-width: 961px) { .chat-container { height: 90vh; border-radius: 28px; } }
-        /* 聊天框：保留平滑滚动，供AI/系统消息的默认滚动使用 */
+        .header { padding: 16px 24px; background-color: var(--bg-card); border-bottom: 1px solid var(--border-main); color: var(--text-header); font-size: 1.5em; font-weight: 500; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
         .chat-box { flex-grow: 1; padding: 20px 24px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; scroll-behavior: smooth; }
         .message { padding: 12px 18px; border-radius: 20px; max-width: 80%; line-height: 1.6; word-wrap: break-word; font-size: 0.95em; }
         .user-message { align-self: flex-end; background-color: var(--color-user); }
@@ -117,7 +117,7 @@
             typingTimerIds = [];
         }
 
-        // --- 语言检测函数 (保留但不再用于生成指令) ---
+        // --- 语言检测函数 (保留但未使用) ---
         function detectLanguage(text) {
             const trimmedText = text.replace(/\s/g, '');
             if (trimmedText.length === 0) return 'Unknown';
@@ -164,10 +164,10 @@
             chatBox.appendChild(messageDiv);
             
             if (sender !== 'user') {
-                // 系统/AI 消息：滚动到底部，确保最新信息可见 (使用 CSS smooth behavior)
+                // 系统/AI 消息：滚动到底部，确保最新信息可见 (依赖 CSS smooth behavior)
                 chatBox.scrollTop = chatBox.scrollHeight; 
             }
-            // 返回消息元素，用于后续定位滚动
+            // 返回消息元素，用于后续定位滚动 (此处不再使用)
             return messageDiv;
         }
 
@@ -248,7 +248,7 @@
             }
         }
 
-        // --- 核心功能函数：sendMessage (即时平滑置顶) ---
+        // --- 核心功能函数：sendMessage (无自定义滚动) ---
         async function sendMessage() {
             const message = messageInput.value.trim();
             if (message === '') return;
@@ -264,13 +264,11 @@
             }
             // ----------------------------------------
 
+            // --- 无强制语言指令 ---
             const finalMessage = message; 
 
-            // 1. 捕获用户消息元素
+            // 1. 捕获用户消息元素 (消息出现在底部)
             const userMessageDiv = appendMessage('user', message); 
-            
-            // 【关键修改】：在发送后立即，使用平滑动画将用户消息置于顶部
-            userMessageDiv.scrollIntoView({ block: 'start', behavior: 'smooth' });
             
             messageInput.value = '';
             sendButton.disabled = true;
@@ -285,8 +283,8 @@
             aiThinkingMessage.classList.add('message', 'ai-message', 'ai-thinking'); 
             aiThinkingMessage.textContent = '思考中...'; 
             chatBox.appendChild(aiThinkingMessage);
-            // 此时不进行滚动，因为置顶已经在上一步完成了
-            
+            // ...
+
             try {
                 const response = await fetch('/api/chat', {
                     method: 'POST',
@@ -312,9 +310,9 @@
                     aiMessageDiv.classList.add('message', 'ai-message');
                     chatBox.appendChild(aiMessageDiv);
                     
-                    // 注意：AI 消息出现后，聊天框会因为 CSS 的 scroll-behavior: smooth 自动滚动到底部。
-                    // 这一步不需要额外的滚动指令。
-
+                    // 【v5.0 核心】：此处不执行任何自定义滚动指令。
+                    // 滚动完全依赖 CSS 的 scroll-behavior: smooth 自动滚动到底部。
+                    
                     await startTyping(aiMessageDiv, aiText); 
                     
                 } else {
