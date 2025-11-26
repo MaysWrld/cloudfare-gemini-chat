@@ -1,4 +1,4 @@
-// /functions/api/chat.js - 启用对话记忆版本 (Cookie 修复)
+// /functions/api/chat.js - 最终稳定且启用对话记忆版本
 
 import { getConfig } from '../auth'; 
 
@@ -15,7 +15,6 @@ function getSessionData(request) {
     let setCookieHeader = null;
 
     if (cookieHeader) {
-        // 尝试从现有 Cookie 中获取 Session ID
         const cookies = cookieHeader.split(';').map(c => c.trim().split('='));
         const existingSessionId = cookies.find(([name]) => name === SESSION_COOKIE_NAME)?.[1];
         if (existingSessionId) {
@@ -25,8 +24,10 @@ function getSessionData(request) {
     
     // 如果没有或无效，则生成一个新的
     if (!sessionId) {
-        sessionId = crypto.randomUUID(); 
-        // 构造 Set-Cookie 头部，确保新的 Session ID 被设置回客户端
+        // 使用更具兼容性的ID生成方法 (修复点)
+        sessionId = (Date.now() + Math.random()).toString(36).replace('.', '');
+        
+        // 构造 Set-Cookie 头部
         const isSecure = request.url.startsWith('https://');
         setCookieHeader = `${SESSION_COOKIE_NAME}=${sessionId}; Max-Age=${HISTORY_TTL}; Path=/; HttpOnly; SameSite=Strict${isSecure ? '; Secure' : ''}`;
     }
@@ -43,6 +44,7 @@ export async function onRequest({ request, env }) {
     }
 
     const config = await getConfig(env);
+    // 获取或生成 Session ID 和 Set-Cookie 头部
     const { sessionId, setCookieHeader } = getSessionData(request);
 
     try {
@@ -56,10 +58,9 @@ export async function onRequest({ request, env }) {
         }
         
         // 2. 构造完整的 contents 数组 (历史 + 当前问题)
-        // clientBody.contents 只有最新的用户消息
         const contents = [...history, ...clientBody.contents];
 
-        // 3. 构造 Gemini API 请求体 (使用完整的 contents 数组)
+        // 3. 构造 Gemini API 请求体
         const geminiRequestBody = JSON.stringify({
             contents: contents,
         });
@@ -81,8 +82,8 @@ export async function onRequest({ request, env }) {
             
             if (aiText) {
                 // 7. 更新历史记录并保存到 KV
-                const newUserMessage = clientBody.contents[0]; // 用户消息
-                const newAiResponse = { role: 'model', parts: [{ text: aiText }] }; // AI回复
+                const newUserMessage = clientBody.contents[0]; 
+                const newAiResponse = { role: 'model', parts: [{ text: aiText }] }; 
                 
                 history.push(newUserMessage, newAiResponse);
                 
@@ -96,7 +97,7 @@ export async function onRequest({ request, env }) {
                 headers: { 'Content-Type': 'application/json' }
             });
 
-            // 9. 确保 Session ID Cookie 被设置
+            // 9. 确保 Session ID Cookie 被设置 (修复点：无论成功失败，只要需要就设置)
             if (setCookieHeader) {
                 response.headers.set('Set-Cookie', setCookieHeader);
             }
@@ -105,7 +106,6 @@ export async function onRequest({ request, env }) {
 
         } else {
             // 10. 如果 AI API 返回错误状态（非 200/ok）
-            //    我们仍需返回错误信息，并确保 Cookie 被设置。
             
             // 复制错误响应的内容和状态
             const errorBody = await aiResponse.text();
@@ -114,7 +114,7 @@ export async function onRequest({ request, env }) {
                 headers: { 'Content-Type': aiResponse.headers.get('Content-Type') || 'application/json' }
             });
             
-            // 确保 Session ID Cookie 被设置 (即使是错误响应，也要建立会话)
+            // 确保 Session ID Cookie 被设置 (修复点：即使是错误响应，也要建立会话)
             if (setCookieHeader) {
                 errorResponse.headers.set('Set-Cookie', setCookieHeader);
             }
