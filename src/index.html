@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="light dark"> 
-    <title>AI 助手 4.7 (使用 scrollIntoView 终极修复置顶)</title>
+    <title>AI 助手 4.8 (恢复平滑置顶动画)</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2d000/svg' viewBox='0 0 100 100'><text y='-.1em' x='-.05em' font-size='90'>✨</text></svg>">
     <style>
         /* =================================================== */
@@ -57,7 +57,7 @@
         body { font-family: 'Google Sans', 'Roboto', Arial, sans-serif; background-color: var(--bg-main); display: flex; justify-content: center; align-items: center; color: var(--text-main); }
         .chat-container { width: 100%; height: 100%; max-width: 960px; background-color: var(--bg-card); border-radius: 0; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2); display: flex; flex-direction: column; min-height: initial; overflow: hidden; }
         @media (min-width: 961px) { .chat-container { height: 90vh; border-radius: 28px; } }
-        .header { padding: 16px 24px; background-color: var(--bg-card); border-bottom: 1px solid var(--border-main); color: var(--text-header); font-size: 1.5em; font-weight: 500; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+        /* 聊天框：保留平滑滚动，供AI/系统消息的默认滚动使用 */
         .chat-box { flex-grow: 1; padding: 20px 24px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; scroll-behavior: smooth; }
         .message { padding: 12px 18px; border-radius: 20px; max-width: 80%; line-height: 1.6; word-wrap: break-word; font-size: 0.95em; }
         .user-message { align-self: flex-end; background-color: var(--color-user); }
@@ -164,7 +164,7 @@
             chatBox.appendChild(messageDiv);
             
             if (sender !== 'user') {
-                // 系统/AI 消息：滚动到底部，确保最新信息可见
+                // 系统/AI 消息：滚动到底部，确保最新信息可见 (使用 CSS smooth behavior)
                 chatBox.scrollTop = chatBox.scrollHeight; 
             }
             // 返回消息元素，用于后续定位滚动
@@ -311,8 +311,8 @@
                     aiMessageDiv.classList.add('message', 'ai-message');
                     chatBox.appendChild(aiMessageDiv);
                     
-                    // 【终极修复】：使用 scrollIntoView 将用户消息置于顶部
-                    userMessageDiv.scrollIntoView({ block: 'start' });
+                    // 【关键修复】：使用 scrollIntoView，并加入 'smooth' 动画效果
+                    userMessageDiv.scrollIntoView({ block: 'start', behavior: 'smooth' });
                     
                     await startTyping(aiMessageDiv, aiText); 
                     
