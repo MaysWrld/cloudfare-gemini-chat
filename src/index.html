@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="light dark"> 
-    <title>AI 助手 6.0 (新增新建对话)</title>
+    <title>AI 助手 6.1 (清除对话)</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2d000/svg' viewBox='0 0 100 100'><text y='-.1em' x='-.05em' font-size='90'>✨</text></svg>">
     <style>
         /* =================================================== */
@@ -57,7 +57,25 @@
         body { font-family: 'Google Sans', 'Roboto', Arial, sans-serif; background-color: var(--bg-main); display: flex; justify-content: center; align-items: center; color: var(--text-main); }
         .chat-container { width: 100%; height: 100%; max-width: 960px; background-color: var(--bg-card); border-radius: 0; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2); display: flex; flex-direction: column; min-height: initial; overflow: hidden; }
         @media (min-width: 961px) { .chat-container { height: 90vh; border-radius: 28px; } }
-        .header { padding: 16px 24px; background-color: var(--bg-card); border-bottom: 1px solid var(--border-main); color: var(--text-header); font-size: 1.5em; font-weight: 500; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+        .header { 
+            padding: 16px 24px; 
+            background-color: var(--bg-card); 
+            border-bottom: 1px solid var(--border-main); 
+            color: var(--text-header); 
+            font-size: 1.5em; 
+            font-weight: 500; 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between; /* 确保标题和按钮分开 */
+            flex-shrink: 0; 
+        }
+        .header-title {
+            /* 确保标题和✨对齐 */
+            display: flex;
+            align-items: center;
+            gap: 8px; 
+        }
+
         .chat-box { flex-grow: 1; padding: 20px 24px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; 
             /* 滚动特性保留 v5.2 设置 */
             scroll-behavior: smooth; 
@@ -89,32 +107,26 @@
         #sendButton:hover { background-color: #1565c0; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); }
         #sendButton:disabled { background-color: #dadce0; cursor: not-allowed; }
 
-        /* V6.0 新建对话按钮样式 */
-        #newChatButton {
-            width: 44px; 
-            height: 44px;
-            background-color: var(--bg-input); 
+        /* V6.1 清除对话按钮样式 */
+        #clearChatButton {
+            background: none;
+            border: none;
             color: var(--text-main);
-            border: 1px solid var(--border-main);
-            border-radius: 50%; 
             cursor: pointer;
-            font-size: 1.5em; /* 大号加号 */
-            line-height: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: background-color 0.2s, box-shadow 0.2s;
-            flex-shrink: 0;
+            font-size: 1.5em; /* 确保图标清晰可见 */
+            padding: 0;
+            margin: 0;
+            opacity: 0.7;
+            transition: opacity 0.2s, transform 0.2s;
             outline: none;
+            /* 确保图标对齐标题基线 */
+            line-height: 1;
+            /* 确保点击区域不触发意外的滚动 */
+            flex-shrink: 0; 
         }
-        #newChatButton:hover {
-            background-color: var(--color-ai);
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        }
-        /* 确保加号居中 */
-        #newChatButton span {
-            display: block;
-            transform: translateY(-2px); 
+        #clearChatButton:hover {
+            opacity: 1;
+            transform: scale(1.1);
         }
     </style>
 </head>
@@ -122,12 +134,12 @@
 
     <div class="chat-container">
         <div class="header">
-            AI 助手 <span>✨</span>
+            <span class="header-title">AI 助手 <span>✨</span></span>
+            <button id="clearChatButton" title="清除对话历史">🧹</button> 
         </div>
         <div class="chat-box" id="chatBox">
             </div>
         <div class="input-area">
-            <button id="newChatButton" title="新建对话"><span>＋</span></button> 
             <input type="text" id="messageInput" placeholder="向 AI 提问..." autofocus>
             <button id="sendButton">发送</button>
         </div>
@@ -138,8 +150,8 @@
         const messageInput = document.getElementById('messageInput');
         const sendButton = document.getElementById('sendButton');
         
-        // V6.0: 获取新建对话按钮
-        const newChatButton = document.getElementById('newChatButton');
+        // V6.1: 获取清除对话按钮
+        const clearChatButton = document.getElementById('clearChatButton');
         
         // --- 【全局状态】用于打断功能 ---
         let currentAbortController = null; 
@@ -249,8 +261,8 @@
             typeWelcome();
         }
 
-        // --- V6.0 核心函数：新建对话 ---
-        function newChat() {
+        // --- V6.1 核心函数：清除对话 ---
+        function clearChat() {
             // 1. 停止所有正在进行的任务
             stopAllTyping(); 
             if (currentAbortController) {
@@ -389,9 +401,9 @@
             }
         }
 
-        // --- 事件监听器：V6.0 新增了新建对话按钮的监听 ---
+        // --- 事件监听器：V6.1 增加了清除对话按钮的监听 ---
         sendButton.addEventListener('click', sendMessage);
-        newChatButton.addEventListener('click', newChat); // <-- 新增监听器
+        clearChatButton.addEventListener('click', clearChat); // <-- 新增监听器
 
         messageInput.addEventListener('keydown', function(event) {
             if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
