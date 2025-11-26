@@ -1,4 +1,4 @@
-// /functions/api/chat.js
+// /functions/api/chat.js (Gemini API 兼容版)
 
 import { getConfig } from '../auth'; 
 
@@ -7,22 +7,22 @@ export async function onRequest({ request, env }) {
         return new Response('Method Not Allowed', { status: 405 });
     }
 
-    // 1. 从 KV 获取最新的配置，包括 API URL 和 Key
     const config = await getConfig(env);
     
-    // 2. 转发请求到 AI 模型 API
     try {
-        const aiResponse = await fetch(config.apiUrl, {
+        // *** 关键修改 1: 创建带 API Key 查询参数的 URL ***
+        // Gemini API 认证要求 Key 必须作为查询参数 'key' 附加在 URL 上。
+        const url = `${config.apiUrl}?key=${config.apiKey}`; 
+
+        const aiResponse = await fetch(url, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                // 在后端安全地使用 API Key，假设您的模型要求 Bearer 令牌
-                'Authorization': `Bearer ${config.apiKey}` 
+                // *** 关键修改 2: 移除 Authorization 头部 ***
             },
             body: request.body, // 转发客户端发送的对话内容
         });
 
-        // 3. 将 AI 模型的响应（包括流式数据）直接返回给客户端
         return aiResponse; 
 
     } catch (error) {
