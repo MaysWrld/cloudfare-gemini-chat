@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="light dark"> 
-    <title>AI 助手 5.1 (Gemini 式平滑置顶)</title>
+    <title>AI 助手 5.2 (平滑置顶，带延迟修正)</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2d000/svg' viewBox='0 0 100 100'><text y='-.1em' x='-.05em' font-size='90'>✨</text></svg>">
     <style>
         /* =================================================== */
@@ -248,7 +248,7 @@
             }
         }
 
-        // --- 核心功能函数：sendMessage (即时平滑置顶) ---
+        // --- 核心功能函数：sendMessage (即时平滑置顶，带延迟修正) ---
         async function sendMessage() {
             const message = messageInput.value.trim();
             if (message === '') return;
@@ -269,8 +269,13 @@
             // 1. 捕获用户消息元素 (消息出现在底部)
             const userMessageDiv = appendMessage('user', message); 
             
-            // 【关键修改：即时平滑置顶】在发送后立即将用户消息滑到顶部
-            userMessageDiv.scrollIntoView({ block: 'start', behavior: 'smooth' });
+            // 【v5.2 修复】：引入 setTimeout，确保 DOM 稳定后再执行平滑置顶
+            setTimeout(() => {
+                // 确保 chatBox 仍存在且可滚动
+                if (userMessageDiv && chatBox.scrollHeight > chatBox.clientHeight) {
+                     userMessageDiv.scrollIntoView({ block: 'start', behavior: 'smooth' });
+                }
+            }, 50); 
             
             messageInput.value = '';
             sendButton.disabled = true;
@@ -285,7 +290,7 @@
             aiThinkingMessage.classList.add('message', 'ai-message', 'ai-thinking'); 
             chatBox.appendChild(aiThinkingMessage);
             
-            // 使用 setTimeout 确保思考中消息出现在置顶操作完成后，视觉效果更平滑
+            // 确保思考中消息出现在置顶操作完成后，视觉效果更平滑
             setTimeout(() => {
                 aiThinkingMessage.textContent = '思考中...'; 
             }, 100);
@@ -315,7 +320,7 @@
                     aiMessageDiv.classList.add('message', 'ai-message');
                     chatBox.appendChild(aiMessageDiv);
                     
-                    // 此处不需再做滚动，因为用户消息已置顶，新的 AI 消息会紧跟在下面。
+                    // 此处不需再做滚动
                     
                     await startTyping(aiMessageDiv, aiText); 
                     
