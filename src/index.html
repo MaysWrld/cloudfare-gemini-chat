@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="light dark"> 
-    <title>AI 助手 5.8 (稳定版)</title>
+    <title>AI 助手 5.9 (滚动修复)</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2d000/svg' viewBox='0 0 100 100'><text y='-.1em' x='-.05em' font-size='90'>✨</text></svg>">
     <style>
         /* =================================================== */
@@ -251,7 +251,7 @@
             }
         }
 
-        // --- 核心功能函数：sendMessage ---
+        // --- 核心功能函数：sendMessage (V5.9 滚动修复) ---
         async function sendMessage() {
             const message = messageInput.value.trim();
             if (message === '') return;
@@ -272,10 +272,8 @@
             // 1. 捕获用户消息元素
             const userMessageDiv = appendMessage('user', message); 
             
-            // V5.2 滚动逻辑：尝试使用原生 smooth scroll 置顶（无偏移）
-            if (chatBox.scrollHeight > chatBox.clientHeight) {
-                userMessageDiv.scrollIntoView({ block: 'start', behavior: 'smooth' });
-            }
+            // V5.9 滚动修复：无条件使用 scrollIntoView({ block: 'start' }) 来确保用户消息置顶
+            userMessageDiv.scrollIntoView({ block: 'start', behavior: 'smooth' });
             
             messageInput.value = '';
             sendButton.disabled = true;
