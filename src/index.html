@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="light dark"> 
-    <title>AI 助手 5.9 (滚动修复)</title>
+    <title>AI 助手 5.10 (滚动动画优先)</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2d000/svg' viewBox='0 0 100 100'><text y='-.1em' x='-.05em' font-size='90'>✨</text></svg>">
     <style>
         /* =================================================== */
@@ -251,46 +251,11 @@
             }
         }
 
-        // --- 核心功能函数：sendMessage (V5.9 滚动修复) ---
-        async function sendMessage() {
-            const message = messageInput.value.trim();
-            if (message === '') return;
-
-            // --- 实现打断功能 ---
-            stopAllTyping(); 
-            if (currentAbortController) {
-                currentAbortController.abort(); 
-                currentAbortController = null;
-                const oldThinking = document.querySelector('.ai-thinking');
-                if (oldThinking) oldThinking.remove(); 
-                appendMessage('system', '🔴 旧操作已中断。正在处理新请求...'); 
-            }
-            // ----------------------------------------
-
-            const finalMessage = message; 
-
-            // 1. 捕获用户消息元素
-            const userMessageDiv = appendMessage('user', message); 
+        // --- V5.10 新增函数：处理 API 聊天响应 ---
+        async function handleApiChat(aiMessageDiv, finalMessage, signal) {
             
-            // V5.9 滚动修复：无条件使用 scrollIntoView({ block: 'start' }) 来确保用户消息置顶
-            userMessageDiv.scrollIntoView({ block: 'start', behavior: 'smooth' });
-            
-            messageInput.value = '';
-            sendButton.disabled = true;
-            messageInput.placeholder = 'AI 正在思考...';
-            
-            // 2. 设置新的 AbortController
-            currentAbortController = new AbortController();
-            const signal = currentAbortController.signal;
-
-            // 3. V5.2.1 动画修正：创建单个元素用于思考和最终回复，并添加动画类
-            const aiMessageDiv = document.createElement('div');
-            aiMessageDiv.classList.add('message', 'ai-message', 'ai-thinking'); // <-- 动画类从这里开始
-            chatBox.appendChild(aiMessageDiv);
-            
-            setTimeout(() => {
-                aiMessageDiv.textContent = '思考中...'; 
-            }, 100);
+            // 确保 AI 思考中文字出现 (微小延迟)
+            setTimeout(() => { aiMessageDiv.textContent = '思考中...'; }, 100);
 
             try {
                 const response = await fetch('/api/chat', {
@@ -337,10 +302,53 @@
                     console.error('Chat error:', error);
                 }
             } finally {
+                // 无论成功失败，重置输入状态
                 currentAbortController = null; 
                 sendButton.disabled = false;
                 messageInput.placeholder = '向 AI 提问...';
             }
+        }
+
+        // --- 核心功能函数：sendMessage (V5.10 滚动动画优先) ---
+        async function sendMessage() {
+            const message = messageInput.value.trim();
+            if (message === '') return;
+
+            // --- 实现打断功能 ---
+            stopAllTyping(); 
+            if (currentAbortController) {
+                currentAbortController.abort(); 
+                currentAbortController = null;
+                const oldThinking = document.querySelector('.ai-thinking');
+                if (oldThinking) oldThinking.remove(); 
+                appendMessage('system', '🔴 旧操作已中断。正在处理新请求...'); 
+            }
+            // ----------------------------------------
+
+            const finalMessage = message; 
+
+            // 1. 捕获用户消息元素并清除输入
+            const userMessageDiv = appendMessage('user', message); 
+            messageInput.value = '';
+            sendButton.disabled = true;
+            messageInput.placeholder = 'AI 正在思考...';
+            
+            // 2. 确保用户消息置顶 (V5.10 滚动优先)
+            userMessageDiv.scrollIntoView({ block: 'start', behavior: 'smooth' });
+            
+            // 3. 设置新的 AbortController
+            currentAbortController = new AbortController();
+
+            // 4. 延迟 50ms 启动 AI 思考框和 API 调用
+            setTimeout(() => {
+                // 4a. 创建 AI 思考框
+                const aiMessageDiv = document.createElement('div');
+                aiMessageDiv.classList.add('message', 'ai-message', 'ai-thinking'); 
+                chatBox.appendChild(aiMessageDiv);
+                
+                // 4b. 调用 API 处理函数
+                handleApiChat(aiMessageDiv, finalMessage, currentAbortController.signal);
+            }, 50);
         }
 
         // --- 事件监听器 ---
