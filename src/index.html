@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="light dark"> 
-    <title>AI 助手 6.2 (重新对话)</title>
+    <title>AI 助手 6.0 (新增新建对话)</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2d000/svg' viewBox='0 0 100 100'><text y='-.1em' x='-.05em' font-size='90'>✨</text></svg>">
     <style>
         /* =================================================== */
@@ -85,7 +85,7 @@
         .ai-message { align-self: flex-start; background-color: var(--color-ai); }
         .system-message { align-self: center; background-color: var(--color-system-bg); color: var(--color-system-text); font-size: 0.85em; text-align: center; padding: 8px 12px; border-radius: 12px; max-width: 60%; }
 
-        /* --- 呼吸动画效果 --- */
+        /* --- 呼吸动画效果 (V5.2.1 修复) --- */
         @keyframes breathe-border {
             0%, 100% { box-shadow: 0 0 0 0px rgba(var(--color-brand-blue-rgb), 0.5); }
             50% { box-shadow: 0 0 0 3px rgba(var(--color-brand-blue-rgb), 0.8); }
@@ -107,24 +107,32 @@
         #sendButton:hover { background-color: #1565c0; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); }
         #sendButton:disabled { background-color: #dadce0; cursor: not-allowed; }
 
-        /* V6.2 重新对话按钮样式 */
-        #restartChatButton {
-            background: none;
-            border: none;
+        /* V6.0 新建对话按钮样式 */
+        #newChatButton {
+            width: 44px; 
+            height: 44px;
+            background-color: var(--bg-input); 
             color: var(--text-main);
+            border: 1px solid var(--border-main);
+            border-radius: 50%; 
             cursor: pointer;
-            font-size: 1.5em; 
-            padding: 0;
-            margin: 0;
-            opacity: 0.7;
-            transition: opacity 0.2s, transform 0.2s;
-            outline: none;
+            font-size: 1.5em; /* 大号加号 */
             line-height: 1;
-            flex-shrink: 0; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s, box-shadow 0.2s;
+            flex-shrink: 0;
+            outline: none;
         }
-        #restartChatButton:hover {
-            opacity: 1;
-            transform: scale(1.1);
+        #newChatButton:hover {
+            background-color: var(--color-ai);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        /* 确保加号居中 */
+        #newChatButton span {
+            display: block;
+            transform: translateY(-2px); 
         }
     </style>
 </head>
@@ -132,12 +140,12 @@
 
     <div class="chat-container">
         <div class="header">
-            <span class="header-title">AI 助手 <span>✨</span></span>
-            <button id="restartChatButton" title="重新对话 (清除上下文)">🔄</button> 
+            AI 助手 <span>✨</span>
         </div>
         <div class="chat-box" id="chatBox">
             </div>
         <div class="input-area">
+            <button id="newChatButton" title="新建对话"><span>＋</span></button> 
             <input type="text" id="messageInput" placeholder="向 AI 提问..." autofocus>
             <button id="sendButton">发送</button>
         </div>
@@ -148,8 +156,8 @@
         const messageInput = document.getElementById('messageInput');
         const sendButton = document.getElementById('sendButton');
         
-        // V6.2: 获取重新对话按钮
-        const restartChatButton = document.getElementById('restartChatButton');
+        // V6.0: 获取新建对话按钮
+        const newChatButton = document.getElementById('newChatButton');
         
         // --- 【全局状态】用于打断功能 ---
         let currentAbortController = null; 
@@ -259,8 +267,8 @@
             typeWelcome();
         }
 
-        // --- V6.2 核心函数：重新对话 (清除上下文) ---
-        function restartChat() {
+        // --- V6.0 核心函数：新建对话 (清除上下文) ---
+        function newChat() {
             // 1. 停止所有正在进行的任务
             stopAllTyping(); 
             if (currentAbortController) {
@@ -401,7 +409,7 @@
 
         // --- 事件监听器 ---
         sendButton.addEventListener('click', sendMessage);
-        restartChatButton.addEventListener('click', restartChat); // <-- V6.2 监听器
+        newChatButton.addEventListener('click', newChat); // <-- V6.0 监听器
 
         messageInput.addEventListener('keydown', function(event) {
             if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
