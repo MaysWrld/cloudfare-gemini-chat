@@ -4,8 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="light dark"> 
-    <title>AI 助手 v6.0 (橡皮筋回弹效果)</title>
+    <title>AI 助手 v6.1 (跨浏览器回弹修复)</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2d000/svg' viewBox='0 0 100 100'><text y='-.1em' x='-.05em' font-size='90'>✨</text></svg>">
+    
+    <script src="https://cdn.jsdelivr.net/npm/scrollbooster@3.0.2/dist/scrollbooster.min.js"></script>
+    
     <style>
         /* =================================================== */
         /* === 颜色变量定义：深浅模式切换的核心 (V5.1) === */
@@ -73,16 +76,19 @@
         .chat-box { 
             flex-grow: 1; 
             padding: 20px 24px; 
-            overflow-y: auto; 
+            
+            /* FIX: 移除与 ScrollBooster 冲突的原生滚动属性 */
+            /* overflow-y: auto; */ 
+            /* scroll-behavior: smooth; */ 
+            /* -webkit-overflow-scrolling: touch; */ 
+            
             display: flex; 
             flex-direction: column; 
             gap: 16px; 
-            /* V5.2 核心功能：平滑滚动 */
-            scroll-behavior: smooth; 
-            
-            /* V6.0: 橡皮筋回弹效果 */
-            -webkit-overflow-scrolling: touch; 
         }
+        
+        /* ScrollBooster 接管滚动后，需要设置内容容器高度 */
+        .chat-box > div { min-height: 100%; }
         
         .message { 
             padding: 12px 18px; 
@@ -133,11 +139,13 @@
 
     <div class="chat-container">
         <div class="header">
-            AI 助手 v6.0 <span>✨</span>
+            AI 助手 v6.1 <span>✨</span>
         </div>
+        
         <div class="chat-box" id="chatBox">
             <div id="scrollSentinel"></div>
         </div>
+        
         <div class="input-area">
             <input type="text" id="messageInput" placeholder="向 AI 提问..." autofocus>
             <button id="sendButton">发送</button>
@@ -153,12 +161,37 @@
         // --- 【全局状态】用于打断功能 ---
         let currentAbortController = null; 
         let typingTimerIds = []; 
+        // ScrollBooster 实例全局变量
+        let scrollBoosterInstance = null;
         // ------------------------------------
 
-        // --- V5.12 新增函数：动态更新哨兵高度 ---
+        // ScrollBooster 初始化函数
+        function initializeScrollBooster() {
+            if (scrollBoosterInstance) return; 
+
+            scrollBoosterInstance = new ScrollBooster({
+                // viewport 和 content 都是 chatBox，因为它没有外部滚动条
+                viewport: chatBox,
+                content: chatBox, 
+                direction: 'vertical',
+                emulateScroll: true, 
+                bounce: true, 
+                bounceForce: 0.2
+            });
+            
+            // 初始化完成后，立刻进行一次更新
+            scrollBoosterInstance.update(); 
+        }
+
+        // --- 动态更新哨兵高度 (V6.1 修复：每次更新后通知 ScrollBooster) ---
         function updateSentinelHeight() {
             const chatBoxHeight = chatBox.clientHeight;
             scrollSentinel.style.height = (chatBoxHeight + 10) + 'px';
+            
+            // FIX: 视口或内容大小变化，必须调用 update() 
+            if (scrollBoosterInstance) {
+                scrollBoosterInstance.update();
+            }
         }
 
         // --- 中断动画函数 (保持不变) ---
@@ -187,7 +220,7 @@
             return htmlText.replace(/\n/g, '<br>');
         }
 
-        // --- 核心功能函数：appendMessage (V5.11 插入到哨兵元素之前) ---
+        // --- 核心功能函数：appendMessage (V6.1 修复：每次添加后通知 ScrollBooster) ---
         function appendMessage(sender, text) {
             const messageDiv = document.createElement('div');
             messageDiv.classList.add('message');
@@ -203,11 +236,16 @@
             // 确保消息插入到哨兵元素之前
             chatBox.insertBefore(messageDiv, scrollSentinel);
             
-            if (sender !== 'user') {
-                // 系统/AI 消息：滚动到底部，确保最新信息可见
+            // FIX: 内容发生变化，必须调用 update() 更新滚动边界
+            if (scrollBoosterInstance) {
+                scrollBoosterInstance.update();
+            }
+            
+            // 只有 ScrollBooster 实例存在时，我们才手动设置 scrollTop
+            if (sender !== 'user' && chatBox.scrollHeight > chatBox.clientHeight) {
                 chatBox.scrollTop = chatBox.scrollHeight; 
             }
-            // 返回消息元素，用于后续定位滚动
+            
             return messageDiv;
         }
         
@@ -241,7 +279,7 @@
             });
         }
         
-        // --- 欢迎语的异步处理 (V5.11 插入到哨兵元素之前) ---
+        // --- 欢迎语的异步处理 (保持不变) ---
         function displayWelcomeMessage(welcomeMessageDiv, welcomeText) {
             let i = 0;
             const delay = 2; 
@@ -266,7 +304,7 @@
         }
 
         async function fetchConfig() {
-            // V5.12：确保在加载配置前更新哨兵高度
+            // 确保在加载配置前更新哨兵高度
             updateSentinelHeight();
             
             try {
@@ -278,7 +316,7 @@
                     
                     const welcomeMessageDiv = document.createElement('div');
                     welcomeMessageDiv.classList.add('message', 'ai-message');
-                    // V5.11: 插入到哨兵元素之前
+                    // 插入到哨兵元素之前
                     chatBox.insertBefore(welcomeMessageDiv, scrollSentinel); 
                     
                     displayWelcomeMessage(welcomeMessageDiv, welcomeText);
@@ -291,7 +329,7 @@
             }
         }
         
-        // --- V5.10 新增函数：处理 API 聊天响应 (保持不变) ---
+        // --- 处理 API 聊天响应 (保持不变) ---
         async function handleApiChat(aiMessageDiv, finalMessage, signal) {
             
             // 确保 AI 思考中文字出现 (微小延迟)
@@ -349,7 +387,7 @@
             }
         }
 
-        // --- 核心功能函数：sendMessage (V5.13 视觉偏移) ---
+        // --- 核心功能函数：sendMessage (保持不变) ---
         async function sendMessage() {
             const message = messageInput.value.trim();
             if (message === '') return;
@@ -373,7 +411,7 @@
             sendButton.disabled = true;
             messageInput.placeholder = 'AI 正在思考...';
             
-            // 2. 确保用户消息置顶 (V5.12/V5.13: 动态哨兵和 CSS scroll-margin 配合使用)
+            // 2. 确保用户消息置顶 
             updateSentinelHeight();
             userMessageDiv.scrollIntoView({ block: 'start', behavior: 'smooth' });
             
@@ -402,8 +440,13 @@
             }
         });
 
-        // V5.12：监听 DOMContentLoaded 和 resize 事件
-        document.addEventListener('DOMContentLoaded', fetchConfig);
+        // 同时初始化配置和 ScrollBooster
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeScrollBooster();
+            fetchConfig();
+        });
+        
+        // 监听 resize 事件
         window.addEventListener('resize', updateSentinelHeight);
     </script>
 </body>
