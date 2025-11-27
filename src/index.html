@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="light dark"> 
-    <title>AI 助手 5.12 (动态哨兵)</title>
+    <title>AI 助手 5.13 (视觉偏移)</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2d000/svg' viewBox='0 0 100 100'><text y='-.1em' x='-.05em' font-size='90'>✨</text></svg>">
     <style>
         /* =================================================== */
@@ -74,7 +74,18 @@
             /* V5.2 核心功能：平滑滚动 */
             scroll-behavior: smooth; 
         }
-        .message { padding: 12px 18px; border-radius: 20px; max-width: 80%; line-height: 1.6; word-wrap: break-word; font-size: 0.95em; }
+        
+        .message { 
+            padding: 12px 18px; 
+            border-radius: 20px; 
+            max-width: 80%; 
+            line-height: 1.6; 
+            word-wrap: break-word; 
+            font-size: 0.95em; 
+            /* V5.13 视觉偏移：确保滚动到顶部时保留 20px 空间 */
+            scroll-margin-top: 20px;
+        }
+
         .user-message { align-self: flex-end; background-color: var(--color-user); }
         .ai-message { align-self: flex-start; background-color: var(--color-ai); }
         .system-message { align-self: center; background-color: var(--color-system-bg); color: var(--color-system-text); font-size: 0.85em; text-align: center; padding: 8px 12px; border-radius: 12px; max-width: 60%; }
@@ -101,7 +112,7 @@
         #sendButton:hover { background-color: #1565c0; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); }
         #sendButton:disabled { background-color: #dadce0; cursor: not-allowed; }
         
-        /* V5.12 哨兵元素 CSS (高度由 JS 动态设置) */
+        /* V5.12 动态哨兵 CSS (高度由 JS 动态设置) */
         #scrollSentinel {
             min-height: 1px; /* 确保元素存在 */
             flex-shrink: 0;
@@ -331,7 +342,7 @@
             }
         }
 
-        // --- 核心功能函数：sendMessage (V5.12 动态哨兵) ---
+        // --- 核心功能函数：sendMessage (V5.13 视觉偏移) ---
         async function sendMessage() {
             const message = messageInput.value.trim();
             if (message === '') return;
@@ -355,8 +366,7 @@
             sendButton.disabled = true;
             messageInput.placeholder = 'AI 正在思考...';
             
-            // 2. 确保用户消息置顶 (V5.12: 动态哨兵保证了滚动空间)
-            // 滚动前，先确保哨兵高度是正确的（虽然 resize 会处理，但为了安全再次执行）
+            // 2. 确保用户消息置顶 (V5.12/V5.13: 动态哨兵和 CSS scroll-margin 配合使用)
             updateSentinelHeight();
             userMessageDiv.scrollIntoView({ block: 'start', behavior: 'smooth' });
             
