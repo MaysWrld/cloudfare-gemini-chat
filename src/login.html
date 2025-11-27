@@ -5,11 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>管理员登录 - AI 助手</title>
     <style>
+        /* 保留您原始的样式 */
         body { font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; background-color: #f4f7f9; margin: 0; }
         .login-container { background-color: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); width: 300px; }
         h2 { text-align: center; color: #333; margin-bottom: 20px; }
         label { display: block; margin-bottom: 5px; color: #555; font-weight: bold; }
-        input[type="text"], input[type="password"] { width: 100%; padding: 10px; margin-bottom: 20px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        /* 统一输入框样式 */
+        input[type="password"] { width: 100%; padding: 10px; margin-bottom: 20px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; } 
         button { width: 100%; padding: 10px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; transition: background-color 0.3s; }
         button:hover { background-color: #0056b3; }
         #message { margin-top: 15px; text-align: center; color: red; font-weight: bold; }
@@ -19,11 +21,8 @@
     <div class="login-container">
         <h2>管理员登录</h2>
         <form id="loginForm">
-            <label for="username">用户名:</label>
-            <input type="text" id="username" required>
-
-            <label for="password">密码:</label>
-            <input type="password" id="password" required>
+            <label for="adminKey">管理员密钥 (Token):</label>
+            <input type="password" id="adminKey" required>
 
             <button type="submit">登录</button>
         </form>
@@ -33,29 +32,32 @@
     <script>
         document.getElementById('loginForm').addEventListener('submit', async function(event) {
             event.preventDefault();
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
+            
+            // 🔑 获取密钥值
+            const adminKey = document.getElementById('adminKey').value;
             const messageElement = document.getElementById('message');
             messageElement.textContent = '';
-
+            
             try {
-                const response = await fetch('/api/login', {
+                // 🚀 更改：POST 到新的 /auth/login 接口
+                // 🚀 更改：将密钥作为纯文本发送
+                const response = await fetch('/auth/login', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'text/plain' 
                     },
-                    body: JSON.stringify({ username, password })
+                    body: adminKey 
                 });
 
                 const data = await response.json();
 
-                if (response.ok) {
+                if (response.ok && data.success) {
                     messageElement.textContent = '登录成功！正在跳转...';
                     messageElement.style.color = 'green';
-                    // 登录成功后跳转到管理员页面
-                    window.location.href = '/admin.html';
+                    // 登录成功后跳转到管理员页面 (Worker 返回的 redirect 路径)
+                    window.location.href = data.redirect || '/admin'; 
                 } else {
-                    messageElement.textContent = data.error || '登录失败，请检查凭证。';
+                    messageElement.textContent = data.error || '密钥无效，登录失败。';
                     messageElement.style.color = 'red';
                 }
             } catch (error) {
