@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="light dark"> 
-    <title>AI 助手 v6.1 </title>
+    <title>AI 助手 v6.2 </title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2d000/svg' viewBox='0 0 100 100'><text y='-.1em' x='-.05em' font-size='90'>✨</text></svg>">
     <style>
         /* =================================================== */
@@ -57,6 +57,8 @@
         body { font-family: 'Google Sans', 'Roboto', Arial, sans-serif; background-color: var(--bg-main); display: flex; justify-content: center; align-items: center; color: var(--text-main); }
         .chat-container { width: 100%; height: 100%; max-width: 960px; background-color: var(--bg-card); border-radius: 0; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2); display: flex; flex-direction: column; min-height: initial; overflow: hidden; }
         @media (min-width: 961px) { .chat-container { height: 90vh; border-radius: 28px; } }
+        
+        /* 头部样式（已移除按钮） */
         .header { 
             padding: 16px 24px; 
             background-color: var(--bg-card); 
@@ -66,25 +68,10 @@
             font-weight: 500; 
             display: flex; 
             align-items: center; 
-            justify-content: space-between; 
+            /* 确保标题居中（右侧无按钮） */
+            justify-content: center; 
             flex-shrink: 0; 
         }
-
-        /* ⭐ V6.1 新增：新聊天按钮样式 ⭐ */
-        .header .new-chat-button {
-            background: none;
-            border: 1px solid var(--border-main);
-            color: var(--text-main);
-            padding: 6px 12px;
-            border-radius: 18px;
-            font-size: 0.9em;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-        .header .new-chat-button:hover {
-            background-color: var(--color-ai); /* 使用 AI 消息背景色作为悬停效果 */
-        }
-        /* ⭐ 新增按钮样式结束 ⭐ */
 
         .chat-box { 
             flex-grow: 1; 
@@ -93,10 +80,7 @@
             display: flex; 
             flex-direction: column; 
             gap: 16px; 
-            /* V5.2 核心功能：平滑滚动 */
             scroll-behavior: smooth; 
-            
-            /* V6.0: 橡皮筋回弹效果 (仅 iOS Safari 有效) */
             -webkit-overflow-scrolling: touch; 
         }
         
@@ -107,7 +91,6 @@
             line-height: 1.6; 
             word-wrap: break-word; 
             font-size: 0.95em; 
-            /* V5.13 视觉偏移：确保滚动到顶部时保留 20px 空间 */
             scroll-margin-top: 20px;
         }
 
@@ -115,14 +98,14 @@
         .ai-message { align-self: flex-start; background-color: var(--color-ai); }
         .system-message { align-self: center; background-color: var(--color-system-bg); color: var(--color-system-text); font-size: 0.85em; text-align: center; padding: 8px 12px; border-radius: 12px; max-width: 60%; }
 
-        /* --- 呼吸动画效果 (V5.2.1 修复) --- */
+        /* --- 呼吸动画效果 --- */
         @keyframes breathe-border {
             0%, 100% { box-shadow: 0 0 0 0px rgba(var(--color-brand-blue-rgb), 0.5); }
             50% { box-shadow: 0 0 0 3px rgba(var(--color-brand-blue-rgb), 0.8); }
         }
         .ai-thinking { border: 1px solid var(--color-brand-blue); box-sizing: border-box; animation: breathe-border 1.5s infinite ease-in-out; padding: 11px 17px; }
 
-        /* --- Markdown 样式 (V5.0) --- */
+        /* --- Markdown 样式 --- */
         .ai-message pre { background-color: var(--color-code-bg); padding: 10px; border-radius: 8px; overflow-x: auto; margin-top: 10px; font-family: Consolas, Monaco, 'Courier New', monospace; font-size: 0.9em; white-space: pre-wrap; }
         .ai-message pre code { display: block; padding-left: 0; }
         .ai-message h2 { font-size: 1.2em; font-weight: 600; margin-top: 15px; margin-bottom: 5px; color: var(--color-brand-blue); }
@@ -131,17 +114,41 @@
 
         /* 输入区域样式 */
         .input-area { display: flex; padding: 16px 24px; border-top: 1px solid var(--border-main); background-color: var(--bg-card); align-items: center; gap: 10px; flex-shrink: 0; }
+        
+        /* ⭐ V6.2 新增：新聊天图标按钮样式 ⭐ */
+        .input-area .new-chat-icon-button {
+            background: none;
+            color: var(--text-main);
+            border: 1px solid var(--border-main);
+            width: 44px; 
+            height: 44px; 
+            border-radius: 50%; 
+            cursor: pointer;
+            font-size: 1.5em; 
+            font-weight: 300; 
+            transition: background-color 0.2s, border-color 0.2s;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .input-area .new-chat-icon-button:hover {
+            background-color: var(--color-ai);
+            border-color: var(--color-focus-blue);
+        }
+        /* ⭐ 新增按钮样式结束 ⭐ */
+
         #messageInput { flex-grow: 1; padding: 12px 18px; border: 1px solid var(--border-main); border-radius: 24px; font-size: 1em; outline: none; transition: border-color 0.2s, box-shadow 0.2s; background-color: var(--bg-input); color: var(--text-main); }
         #messageInput:focus { border-color: var(--color-focus-blue); box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.2); background-color: var(--bg-card); }
         #sendButton { padding: 12px 20px; background-color: var(--color-brand-blue); color: white; border: none; border-radius: 24px; cursor: pointer; font-size: 1em; transition: background-color 0.3s, box-shadow 0.3s; display: flex; align-items: center; justify-content: center; }
         #sendButton:hover { background-color: #1565c0; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); }
         #sendButton:disabled { background-color: #dadce0; cursor: not-allowed; }
         
-        /* V5.12 动态哨兵 CSS (高度由 JS 动态设置) */
+        /* V5.12 动态哨兵 CSS */
         #scrollSentinel {
-            min-height: 1px; /* 确保元素存在 */
+            min-height: 1px;
             flex-shrink: 0;
-            visibility: hidden; /* 隐藏元素 */
+            visibility: hidden; 
         }
     </style>
 </head>
@@ -149,15 +156,13 @@
 
     <div class="chat-container">
         <div class="header">
-            AI 助手 v6.1 
-            <button id="newChatButton" class="new-chat-button">
-                + 
-            </button> <span>✨</span>
+            AI 助手 v6.2 <span>✨</span>
         </div>
         <div class="chat-box" id="chatBox">
             <div id="scrollSentinel"></div>
         </div>
         <div class="input-area">
+            <button id="newChatIcon" class="new-chat-icon-button">+</button>
             <input type="text" id="messageInput" placeholder="向 AI 提问..." autofocus>
             <button id="sendButton">发送</button>
         </div>
@@ -167,7 +172,8 @@
         const chatBox = document.getElementById('chatBox');
         const messageInput = document.getElementById('messageInput');
         const sendButton = document.getElementById('sendButton');
-        const newChatButton = document.getElementById('newChatButton'); // ⭐ V6.1 新增获取按钮元素
+        // ⭐ V6.2 更新：获取新的 ID 'newChatIcon'
+        const newChatButton = document.getElementById('newChatIcon'); 
         const scrollSentinel = document.getElementById('scrollSentinel');
         
         // --- 【全局状态】用于打断功能 ---
@@ -175,12 +181,11 @@
         let typingTimerIds = []; 
         // ------------------------------------
 
-        // 🎯 痞性风格的个性指令 (只保留痞性、傲慢、不屑的语气)
-        // 注意：如果您的后端使用了环境变量，这里将只作为调试参考。
-        const personaPrompt = "你是一个带痞气且负责人的AI助手，回答时要充满戏谑，语气非常口语化。你的回复带有挑衅性的幽默，但回复内容确实能解决问题，并用'喂'或'你'来称呼用户。你不用每次都重复这个设定。";
+        // 🎯 痞性风格的个性指令 
+        const personaPrompt = "你是一个带痞气且负责人的AI助手，回答时开场先损一顿，中段甩出靠谱干货，最后再用一句不屑收尾，嘴上嫌弃，手上却把事儿办妥，专业度撑场，既有痞性又有责任感，还带点高级范儿。你不用每次都重复这个设定。";
         // ----------------------------------------------------
 
-        // --- V5.12 新增函数：动态更新哨兵高度 ---
+        // --- V5.12 新增函数：动态更新哨兵高度 (保持不变) ---
         function updateSentinelHeight() {
             const chatBoxHeight = chatBox.clientHeight;
             scrollSentinel.style.height = (chatBoxHeight + 10) + 'px';
@@ -212,7 +217,7 @@
             return htmlText.replace(/\n/g, '<br>');
         }
 
-        // --- 核心功能函数：appendMessage (V5.11 插入到哨兵元素之前) ---
+        // --- 核心功能函数：appendMessage (保持不变) ---
         function appendMessage(sender, text) {
             const messageDiv = document.createElement('div');
             messageDiv.classList.add('message');
@@ -225,14 +230,11 @@
                 messageDiv.innerHTML = text;
             }
             
-            // 确保消息插入到哨兵元素之前
             chatBox.insertBefore(messageDiv, scrollSentinel);
             
             if (sender !== 'user') {
-                // 系统/AI 消息：滚动到底部，确保最新信息可见
                 chatBox.scrollTop = chatBox.scrollHeight; 
             }
-            // 返回消息元素，用于后续定位滚动
             return messageDiv;
         }
         
@@ -266,7 +268,7 @@
             });
         }
         
-        // --- 欢迎语的异步处理 (V5.11 插入到哨兵元素之前) ---
+        // --- 欢迎语的异步处理 (保持不变) ---
         function displayWelcomeMessage(welcomeMessageDiv, welcomeText) {
             let i = 0;
             const delay = 2; 
@@ -290,8 +292,8 @@
             typeWelcome();
         }
 
+        // --- fetchConfig (保持不变) ---
         async function fetchConfig() {
-            // V5.12：确保在加载配置前更新哨兵高度
             updateSentinelHeight();
             
             try {
@@ -299,13 +301,11 @@
                 
                 if (response.ok) {
                     const config = await response.json();
-                    // 调整欢迎语以适应痞性人设
                     const defaultWelcome = '喂，小子。你又要问什么？别浪费老子时间。';
                     const welcomeText = config.welcomeMessage || defaultWelcome;
                     
                     const welcomeMessageDiv = document.createElement('div');
                     welcomeMessageDiv.classList.add('message', 'ai-message');
-                    // V5.11: 插入到哨兵元素之前
                     chatBox.insertBefore(welcomeMessageDiv, scrollSentinel); 
                     
                     displayWelcomeMessage(welcomeMessageDiv, welcomeText);
@@ -318,16 +318,13 @@
             }
         }
         
-        // --- ⭐ V6.1 新增函数：清除会话并重新加载 ⭐ ---
+        // --- V6.1 新增函数：清除会话并重新加载 (保持不变) ---
         async function startNewChat() {
-            // 1. 确认用户操作
             if (!confirm("确定要开启新的聊天吗？当前对话记录将被清空。")) {
                 return;
             }
 
-            // 2. 调用新的后端接口 /api/new_chat，让浏览器删除 Cookie
             try {
-                // 停止所有正在进行的动画和 API 请求
                 stopAllTyping();
                 if (currentAbortController) {
                     currentAbortController.abort();
@@ -336,7 +333,6 @@
                 const response = await fetch('/api/new_chat', { method: 'POST' });
                 
                 if (response.ok) {
-                    // 3. 成功删除 Cookie 后，刷新页面，触发后端生成新 Session ID
                     window.location.reload();
                 } else {
                     alert('清除历史失败，请检查网络或后端配置。');
@@ -346,24 +342,19 @@
                 console.error('New Chat Error:', error);
             }
         }
-        // --- V6.1 新增函数结束 ---
 
-        // --- V5.10 新增函数：处理 API 聊天响应 (核心修改在此) ---
+        // --- handleApiChat (保持不变) ---
         async function handleApiChat(aiMessageDiv, finalMessage, signal) {
             
-            // 确保 AI 思考中文字出现 (微小延迟)
             setTimeout(() => { aiMessageDiv.textContent = '思考中...'; }, 100);
 
-            // ⭐ 核心：结合个性和用户消息，形成完整的 Prompt ⭐
             const fullPrompt = `${personaPrompt}\n\n我的问题是：${finalMessage}`;
-            // ⭐ ------------------------------------------ ⭐
 
             try {
                 const response = await fetch('/api/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        // 发送包含个性指令的完整 Prompt
                         contents: [{ role: "user", parts: [{ text: fullPrompt }] }]
                     }),
                     signal: signal 
@@ -379,77 +370,62 @@
                 if (response.ok) {
                     const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || '抱歉，AI 返回了空响应。';
                     
-                    // 复用 aiMessageDiv 开始打字
                     await startTyping(aiMessageDiv, aiText); 
-                    
-                    // 打字完成后，移除动画类
                     aiMessageDiv.classList.remove('ai-thinking');
                     
                 } else {
                     const errorMessage = data.error ? `AI 接口错误：${data.error.message || data.error}` : `请求失败，状态码：${response.status}`;
                     
-                    // 显示错误信息，并移除动画类
                     aiMessageDiv.classList.remove('ai-thinking');
-                    // 替换内容为系统消息格式的错误提示
                     aiMessageDiv.classList.remove('ai-message'); 
                     aiMessageDiv.classList.add('system-message');
                     aiMessageDiv.innerHTML = errorMessage;
                 }
 
             } catch (error) {
-                // 网络连接失败或其它错误，直接移除元素
                 if (error.name !== 'AbortError') {
                     aiMessageDiv.remove(); 
                     appendMessage('system', '网络连接失败，废物。');
                     console.error('Chat error:', error);
                 }
             } finally {
-                // 无论成功失败，重置输入状态
                 currentAbortController = null; 
                 sendButton.disabled = false;
                 messageInput.placeholder = '向 AI 提问...';
             }
         }
 
-        // --- 核心功能函数：sendMessage (V5.13 视觉偏移) ---
+        // --- 核心功能函数：sendMessage (保持不变) ---
         async function sendMessage() {
             const message = messageInput.value.trim();
             if (message === '') return;
 
-            // --- 实现打断功能 ---
             stopAllTyping(); 
             if (currentAbortController) {
                 currentAbortController.abort(); 
                 currentAbortController = null;
                 const oldThinking = document.querySelector('.ai-thinking');
                 if (oldThinking) oldThinking.remove(); 
-                appendMessage('system', '🔴 旧操作已中断，我开始回复新问题。'); 
+                appendMessage('system', '🔴 旧操作已中断。浪费时间。'); 
             }
-            // ----------------------------------------
 
             const finalMessage = message; 
 
-            // 1. 捕获用户消息元素并清除输入
             const userMessageDiv = appendMessage('user', message); 
             messageInput.value = '';
             sendButton.disabled = true;
             messageInput.placeholder = 'AI 正在思考...';
             
-            // 2. 确保用户消息置顶 (V5.12/V5.13: 动态哨兵和 CSS scroll-margin 配合使用)
             updateSentinelHeight();
             userMessageDiv.scrollIntoView({ block: 'start', behavior: 'smooth' });
             
-            // 3. 设置新的 AbortController
             currentAbortController = new AbortController();
 
-            // 4. 延迟 1ms 启动 AI 思考框和 API 调用，确保滚动优先执行
             setTimeout(() => {
-                // 4a. 创建 AI 思考框
                 const aiMessageDiv = document.createElement('div');
                 aiMessageDiv.classList.add('message', 'ai-message', 'ai-thinking'); 
                 chatBox.insertBefore(aiMessageDiv, scrollSentinel); 
                 
-                // 4b. 调用 API 处理函数
                 handleApiChat(aiMessageDiv, finalMessage, currentAbortController.signal);
             }, 50);
         }
@@ -464,10 +440,9 @@
             }
         });
 
-        // ⭐ V6.1 新增：监听新按钮点击事件 ⭐
+        // ⭐ V6.2 更新：监听新图标按钮点击事件
         newChatButton.addEventListener('click', startNewChat);
 
-        // V5.12：监听 DOMContentLoaded 和 resize 事件
         document.addEventListener('DOMContentLoaded', fetchConfig);
         window.addEventListener('resize', updateSentinelHeight);
     </script>
