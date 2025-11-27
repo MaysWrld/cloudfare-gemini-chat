@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="light dark"> 
-    <title>AI 助手 v6.0 </title>
+    <title>AI 助手 v6.1 </title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2d000/svg' viewBox='0 0 100 100'><text y='-.1em' x='-.05em' font-size='90'>✨</text></svg>">
     <style>
         /* =================================================== */
@@ -70,6 +70,22 @@
             flex-shrink: 0; 
         }
 
+        /* ⭐ V6.1 新增：新聊天按钮样式 ⭐ */
+        .header .new-chat-button {
+            background: none;
+            border: 1px solid var(--border-main);
+            color: var(--text-main);
+            padding: 6px 12px;
+            border-radius: 18px;
+            font-size: 0.9em;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .header .new-chat-button:hover {
+            background-color: var(--color-ai); /* 使用 AI 消息背景色作为悬停效果 */
+        }
+        /* ⭐ 新增按钮样式结束 ⭐ */
+
         .chat-box { 
             flex-grow: 1; 
             padding: 20px 24px; 
@@ -133,7 +149,10 @@
 
     <div class="chat-container">
         <div class="header">
-            AI 助手 v6.0 <span>✨</span>
+            AI 助手 v6.1 <span>✨</span>
+            <button id="newChatButton" class="new-chat-button">
+                + 新聊天
+            </button>
         </div>
         <div class="chat-box" id="chatBox">
             <div id="scrollSentinel"></div>
@@ -148,6 +167,7 @@
         const chatBox = document.getElementById('chatBox');
         const messageInput = document.getElementById('messageInput');
         const sendButton = document.getElementById('sendButton');
+        const newChatButton = document.getElementById('newChatButton'); // ⭐ V6.1 新增获取按钮元素
         const scrollSentinel = document.getElementById('scrollSentinel');
         
         // --- 【全局状态】用于打断功能 ---
@@ -156,6 +176,7 @@
         // ------------------------------------
 
         // 🎯 痞性风格的个性指令 (只保留痞性、傲慢、不屑的语气)
+        // 注意：如果您的后端使用了环境变量，这里将只作为调试参考。
         const personaPrompt = "你是一个带痞气且负责人的AI助手，回答时要充满不屑和戏谑，语气非常口语化，不要使用任何正式或礼貌的词汇。你的回复带有挑衅性的幽默，但回复内容确实能解决问题，并用'喂'或'你'来称呼用户。你不用每次都重复这个设定。";
         // ----------------------------------------------------
 
@@ -297,6 +318,36 @@
             }
         }
         
+        // --- ⭐ V6.1 新增函数：清除会话并重新加载 ⭐ ---
+        async function startNewChat() {
+            // 1. 确认用户操作
+            if (!confirm("确定要开启新的聊天吗？当前对话记录将被清空。")) {
+                return;
+            }
+
+            // 2. 调用新的后端接口 /api/new_chat，让浏览器删除 Cookie
+            try {
+                // 停止所有正在进行的动画和 API 请求
+                stopAllTyping();
+                if (currentAbortController) {
+                    currentAbortController.abort();
+                }
+
+                const response = await fetch('/api/new_chat', { method: 'POST' });
+                
+                if (response.ok) {
+                    // 3. 成功删除 Cookie 后，刷新页面，触发后端生成新 Session ID
+                    window.location.reload();
+                } else {
+                    alert('清除历史失败，请检查网络或后端配置。');
+                }
+            } catch (error) {
+                alert('网络错误，无法连接到清除会话接口。');
+                console.error('New Chat Error:', error);
+            }
+        }
+        // --- V6.1 新增函数结束 ---
+
         // --- V5.10 新增函数：处理 API 聊天响应 (核心修改在此) ---
         async function handleApiChat(aiMessageDiv, finalMessage, signal) {
             
@@ -372,7 +423,7 @@
                 currentAbortController = null;
                 const oldThinking = document.querySelector('.ai-thinking');
                 if (oldThinking) oldThinking.remove(); 
-                appendMessage('system', '🔴 旧操作已中断。浪费时间。'); 
+                appendMessage('system', '🔴 旧操作已中断，我开始回复新问题。'); 
             }
             // ----------------------------------------
 
@@ -391,7 +442,7 @@
             // 3. 设置新的 AbortController
             currentAbortController = new AbortController();
 
-            // 4. 延迟 50ms 启动 AI 思考框和 API 调用，确保滚动优先执行
+            // 4. 延迟 1ms 启动 AI 思考框和 API 调用，确保滚动优先执行
             setTimeout(() => {
                 // 4a. 创建 AI 思考框
                 const aiMessageDiv = document.createElement('div');
@@ -412,6 +463,9 @@
                 sendMessage();
             }
         });
+
+        // ⭐ V6.1 新增：监听新按钮点击事件 ⭐
+        newChatButton.addEventListener('click', startNewChat);
 
         // V5.12：监听 DOMContentLoaded 和 resize 事件
         document.addEventListener('DOMContentLoaded', fetchConfig);
