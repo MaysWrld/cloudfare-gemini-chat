@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="light dark"> 
-    <title>AI 助手 5.11 (置顶滚动强化)</title>
+    <title>AI 助手 5.12 (动态哨兵)</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2d000/svg' viewBox='0 0 100 100'><text y='-.1em' x='-.05em' font-size='90'>✨</text></svg>">
     <style>
         /* =================================================== */
@@ -101,9 +101,9 @@
         #sendButton:hover { background-color: #1565c0; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); }
         #sendButton:disabled { background-color: #dadce0; cursor: not-allowed; }
         
-        /* V5.11 哨兵元素 CSS */
+        /* V5.12 哨兵元素 CSS (高度由 JS 动态设置) */
         #scrollSentinel {
-            height: 40vh; /* 提供一个巨大的底部空白空间 */
+            min-height: 1px; /* 确保元素存在 */
             flex-shrink: 0;
             visibility: hidden; /* 隐藏元素 */
         }
@@ -128,7 +128,6 @@
         const chatBox = document.getElementById('chatBox');
         const messageInput = document.getElementById('messageInput');
         const sendButton = document.getElementById('sendButton');
-        // V5.11: 获取哨兵元素
         const scrollSentinel = document.getElementById('scrollSentinel');
         
         // --- 【全局状态】用于打断功能 ---
@@ -136,13 +135,21 @@
         let typingTimerIds = [];         
         // ------------------------------------
 
-        // --- 中断动画函数 ---
+        // --- V5.12 新增函数：动态更新哨兵高度 ---
+        function updateSentinelHeight() {
+            // 获取 chatBox 的实际可见高度 (clientHeight)
+            // 加上 10px 缓冲，确保有足够的空间将元素推到顶部
+            const chatBoxHeight = chatBox.clientHeight;
+            scrollSentinel.style.height = (chatBoxHeight + 10) + 'px';
+        }
+
+        // --- 中断动画函数 (保持不变) ---
         function stopAllTyping() {
             typingTimerIds.forEach(id => clearTimeout(id));
             typingTimerIds = [];
         }
         
-        // --- 辅助函数：Markdown 渲染 ---
+        // --- 辅助函数：Markdown 渲染 (保持不变) ---
         function renderMarkdown(text) {
             let htmlText = text;
             htmlText = htmlText.replace(/```(\w*)\n([\s\S]*?)```/g, function(match, lang, code) {
@@ -162,7 +169,7 @@
             return htmlText.replace(/\n/g, '<br>');
         }
 
-        // --- 核心功能函数：appendMessage (V5.11 修改：插入到哨兵元素之前) ---
+        // --- 核心功能函数：appendMessage (V5.11 插入到哨兵元素之前) ---
         function appendMessage(sender, text) {
             const messageDiv = document.createElement('div');
             messageDiv.classList.add('message');
@@ -179,8 +186,7 @@
             chatBox.insertBefore(messageDiv, scrollSentinel);
             
             if (sender !== 'user') {
-                // 系统/AI 消息：滚动到底部，确保最新信息可见 (依赖 CSS smooth behavior)
-                // 注意：由于哨兵元素的存在，滚动到底部就是滚动到哨兵元素上方
+                // 系统/AI 消息：滚动到底部，确保最新信息可见
                 chatBox.scrollTop = chatBox.scrollHeight; 
             }
             // 返回消息元素，用于后续定位滚动
@@ -217,7 +223,7 @@
             });
         }
         
-        // --- 欢迎语的异步处理 (保持不变) ---
+        // --- 欢迎语的异步处理 (V5.11 插入到哨兵元素之前) ---
         function displayWelcomeMessage(welcomeMessageDiv, welcomeText) {
             let i = 0;
             const delay = 2; 
@@ -242,6 +248,9 @@
         }
 
         async function fetchConfig() {
+            // V5.12：确保在加载配置前更新哨兵高度
+            updateSentinelHeight();
+            
             try {
                 const response = await fetch('/api/config');
                 
@@ -264,7 +273,7 @@
             }
         }
         
-        // --- V5.10 新增函数：处理 API 聊天响应 ---
+        // --- V5.10 新增函数：处理 API 聊天响应 (保持不变) ---
         async function handleApiChat(aiMessageDiv, finalMessage, signal) {
             
             // 确保 AI 思考中文字出现 (微小延迟)
@@ -322,7 +331,7 @@
             }
         }
 
-        // --- 核心功能函数：sendMessage (V5.11 滚动动画优先 + 哨兵) ---
+        // --- 核心功能函数：sendMessage (V5.12 动态哨兵) ---
         async function sendMessage() {
             const message = messageInput.value.trim();
             if (message === '') return;
@@ -346,7 +355,9 @@
             sendButton.disabled = true;
             messageInput.placeholder = 'AI 正在思考...';
             
-            // 2. 确保用户消息置顶 (V5.11: 哨兵元素保证了滚动空间)
+            // 2. 确保用户消息置顶 (V5.12: 动态哨兵保证了滚动空间)
+            // 滚动前，先确保哨兵高度是正确的（虽然 resize 会处理，但为了安全再次执行）
+            updateSentinelHeight();
             userMessageDiv.scrollIntoView({ block: 'start', behavior: 'smooth' });
             
             // 3. 设置新的 AbortController
@@ -357,7 +368,7 @@
                 // 4a. 创建 AI 思考框
                 const aiMessageDiv = document.createElement('div');
                 aiMessageDiv.classList.add('message', 'ai-message', 'ai-thinking'); 
-                chatBox.insertBefore(aiMessageDiv, scrollSentinel); // V5.11: 插入到哨兵元素之前
+                chatBox.insertBefore(aiMessageDiv, scrollSentinel); 
                 
                 // 4b. 调用 API 处理函数
                 handleApiChat(aiMessageDiv, finalMessage, currentAbortController.signal);
@@ -374,7 +385,9 @@
             }
         });
 
+        // V5.12：监听 DOMContentLoaded 和 resize 事件
         document.addEventListener('DOMContentLoaded', fetchConfig);
+        window.addEventListener('resize', updateSentinelHeight);
     </script>
 </body>
 </html>
