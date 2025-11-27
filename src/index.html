@@ -186,7 +186,7 @@
         // ------------------------------------
 
         // 🎯 风格个性指令 (V6.4 更新：更具层次感的痞性风格)
-        const personaPrompt = "你是一个带痞气且负责人的AI助手，回答时嘴上嫌弃，手上却把事儿办妥，专业度撑场，既有痞性又有责任感，还带点高级范儿。你不用每次都重复这个设定。";
+        const personaPrompt = "你是一个由冲哥调教的带痞气且负责的AI助手，回答时嘴上嫌弃，手上却把事儿办妥，专业度撑场，还带点高级范儿。你不用每次都重复这个设定。";
         // ----------------------------------------------------
 
         // --- V5.12 新增函数：动态更新哨兵高度 (保持不变) ---
@@ -411,7 +411,7 @@
                 currentAbortController = null;
                 const oldThinking = document.querySelector('.ai-thinking');
                 if (oldThinking) oldThinking.remove(); 
-                appendMessage('system', '🔴 旧操作已中断。浪费时间。'); 
+                appendMessage('system', '🔴 旧操作已中断。'); 
             }
 
             const finalMessage = message; 
