@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="light dark"> 
-    <title>AI 助手 v6.1 (跨浏览器回弹修复)</title>
+    <title>AI 助手 v6.0 (橡皮筋回弹效果)</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2d000/svg' viewBox='0 0 100 100'><text y='-.1em' x='-.05em' font-size='90'>✨</text></svg>">
     
     <script src="https://cdn.jsdelivr.net/npm/scrollbooster@3.0.2/dist/scrollbooster.min.js"></script>
@@ -77,7 +77,7 @@
             flex-grow: 1; 
             padding: 20px 24px; 
             
-            /* FIX: 移除与 ScrollBooster 冲突的原生滚动属性 */
+            /* 移除与 ScrollBooster 冲突的原生滚动属性 */
             /* overflow-y: auto; */ 
             /* scroll-behavior: smooth; */ 
             /* -webkit-overflow-scrolling: touch; */ 
@@ -86,9 +86,6 @@
             flex-direction: column; 
             gap: 16px; 
         }
-        
-        /* ScrollBooster 接管滚动后，需要设置内容容器高度 */
-        .chat-box > div { min-height: 100%; }
         
         .message { 
             padding: 12px 18px; 
@@ -139,7 +136,7 @@
 
     <div class="chat-container">
         <div class="header">
-            AI 助手 v6.1 <span>✨</span>
+            AI 助手 v6.0 <span>✨</span>
         </div>
         
         <div class="chat-box" id="chatBox">
@@ -156,6 +153,7 @@
         const chatBox = document.getElementById('chatBox');
         const messageInput = document.getElementById('messageInput');
         const sendButton = document.getElementById('sendButton');
+        // 恢复 #scrollSentinel 变量
         const scrollSentinel = document.getElementById('scrollSentinel');
         
         // --- 【全局状态】用于打断功能 ---
@@ -165,12 +163,11 @@
         let scrollBoosterInstance = null;
         // ------------------------------------
 
-        // ScrollBooster 初始化函数
+        // ScrollBooster 初始化函数 (V6.0 状态)
         function initializeScrollBooster() {
             if (scrollBoosterInstance) return; 
 
             scrollBoosterInstance = new ScrollBooster({
-                // viewport 和 content 都是 chatBox，因为它没有外部滚动条
                 viewport: chatBox,
                 content: chatBox, 
                 direction: 'vertical',
@@ -179,16 +176,17 @@
                 bounceForce: 0.2
             });
             
-            // 初始化完成后，立刻进行一次更新
+            // V6.0 状态：初始化完成后更新一次
             scrollBoosterInstance.update(); 
         }
 
-        // --- 动态更新哨兵高度 (V6.1 修复：每次更新后通知 ScrollBooster) ---
+
+        // --- V5.12 恢复：动态更新哨兵高度 (V6.0 状态) ---
         function updateSentinelHeight() {
             const chatBoxHeight = chatBox.clientHeight;
             scrollSentinel.style.height = (chatBoxHeight + 10) + 'px';
             
-            // FIX: 视口或内容大小变化，必须调用 update() 
+            // 恢复 V6.0 状态：通知 ScrollBooster 更新边界 (此版本只有在 resize 时调用)
             if (scrollBoosterInstance) {
                 scrollBoosterInstance.update();
             }
@@ -204,7 +202,7 @@
         function renderMarkdown(text) {
             let htmlText = text;
             htmlText = htmlText.replace(/```(\w*)\n([\s\S]*?)```/g, function(match, lang, code) {
-                const escapedCode = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                const escapedCode = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '>').replace(/>/g, '&gt;');
                 const language = lang ? `<span class="code-lang" style="font-size: 0.8em; color: var(--color-code-lang); display: block; margin-bottom: 5px;">${lang}</span>` : '';
                 return `<pre><code>${language}${escapedCode}</code></pre>`;
             });
@@ -220,7 +218,7 @@
             return htmlText.replace(/\n/g, '<br>');
         }
 
-        // --- 核心功能函数：appendMessage (V6.1 修复：每次添加后通知 ScrollBooster) ---
+        // --- 核心功能函数：appendMessage (恢复：使用 insertBefore 插入到哨兵元素之前) ---
         function appendMessage(sender, text) {
             const messageDiv = document.createElement('div');
             messageDiv.classList.add('message');
@@ -233,13 +231,10 @@
                 messageDiv.innerHTML = text;
             }
             
-            // 确保消息插入到哨兵元素之前
+            // 恢复：确保消息插入到哨兵元素之前
             chatBox.insertBefore(messageDiv, scrollSentinel);
             
-            // FIX: 内容发生变化，必须调用 update() 更新滚动边界
-            if (scrollBoosterInstance) {
-                scrollBoosterInstance.update();
-            }
+            // V6.0 状态：此版本没有在此处调用 scrollBoosterInstance.update()
             
             // 只有 ScrollBooster 实例存在时，我们才手动设置 scrollTop
             if (sender !== 'user' && chatBox.scrollHeight > chatBox.clientHeight) {
@@ -249,37 +244,7 @@
             return messageDiv;
         }
         
-        // --- 打字机效果函数 (保持不变) ---
-        function startTyping(messageElement, rawText, delay = 3) { 
-            return new Promise(resolve => {
-                let i = 0;
-                const cursor = '<span style="opacity: 0.8; margin-left: 2px; color: var(--text-main);">▋</span>'; 
-                
-                function type() {
-                    if (i < rawText.length) {
-                        try {
-                            const currentText = rawText.substring(0, i + 1);
-                            messageElement.innerHTML = renderMarkdown(currentText) + cursor;
-                            
-                            i++;
-                            const timerId = setTimeout(type, delay);
-                            typingTimerIds.push(timerId); 
-                        } catch (e) {
-                            console.error("Typing rendering error:", e);
-                            messageElement.innerHTML = renderMarkdown(rawText);
-                            resolve(); 
-                        }
-                    } else {
-                        messageElement.innerHTML = renderMarkdown(rawText);
-                        resolve();
-                    }
-                }
-
-                type();
-            });
-        }
-        
-        // --- 欢迎语的异步处理 (保持不变) ---
+        // --- 欢迎语的异步处理 (恢复：使用 insertBefore 插入到哨兵元素之前) ---
         function displayWelcomeMessage(welcomeMessageDiv, welcomeText) {
             let i = 0;
             const delay = 2; 
@@ -304,7 +269,7 @@
         }
 
         async function fetchConfig() {
-            // 确保在加载配置前更新哨兵高度
+            // 恢复：确保在加载配置前更新哨兵高度
             updateSentinelHeight();
             
             try {
@@ -316,7 +281,7 @@
                     
                     const welcomeMessageDiv = document.createElement('div');
                     welcomeMessageDiv.classList.add('message', 'ai-message');
-                    // 插入到哨兵元素之前
+                    // 恢复：插入到哨兵元素之前
                     chatBox.insertBefore(welcomeMessageDiv, scrollSentinel); 
                     
                     displayWelcomeMessage(welcomeMessageDiv, welcomeText);
@@ -387,7 +352,7 @@
             }
         }
 
-        // --- 核心功能函数：sendMessage (保持不变) ---
+        // --- 核心功能函数：sendMessage (恢复：调用 updateSentinelHeight) ---
         async function sendMessage() {
             const message = messageInput.value.trim();
             if (message === '') return;
@@ -411,7 +376,7 @@
             sendButton.disabled = true;
             messageInput.placeholder = 'AI 正在思考...';
             
-            // 2. 确保用户消息置顶 
+            // 2. 确保用户消息置顶 (恢复：调用 updateSentinelHeight)
             updateSentinelHeight();
             userMessageDiv.scrollIntoView({ block: 'start', behavior: 'smooth' });
             
@@ -423,6 +388,7 @@
                 // 4a. 创建 AI 思考框
                 const aiMessageDiv = document.createElement('div');
                 aiMessageDiv.classList.add('message', 'ai-message', 'ai-thinking'); 
+                // 恢复：插入到哨兵元素之前
                 chatBox.insertBefore(aiMessageDiv, scrollSentinel); 
                 
                 // 4b. 调用 API 处理函数
@@ -440,13 +406,12 @@
             }
         });
 
-        // 同时初始化配置和 ScrollBooster
+        // 恢复 V6.0 状态的 DOMContentLoaded 和 resize 监听器
         document.addEventListener('DOMContentLoaded', () => {
             initializeScrollBooster();
             fetchConfig();
         });
         
-        // 监听 resize 事件
         window.addEventListener('resize', updateSentinelHeight);
     </script>
 </body>
