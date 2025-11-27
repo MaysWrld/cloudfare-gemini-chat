@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="light dark"> 
-    <title>AI 助手 5.13 (视觉偏移)</title>
+    <title>AI 助手 v6.0 (橡皮筋回弹效果)</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2d000/svg' viewBox='0 0 100 100'><text y='-.1em' x='-.05em' font-size='90'>✨</text></svg>">
     <style>
         /* =================================================== */
@@ -70,9 +70,18 @@
             flex-shrink: 0; 
         }
 
-        .chat-box { flex-grow: 1; padding: 20px 24px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; 
+        .chat-box { 
+            flex-grow: 1; 
+            padding: 20px 24px; 
+            overflow-y: auto; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 16px; 
             /* V5.2 核心功能：平滑滚动 */
             scroll-behavior: smooth; 
+            
+            /* V6.0: 橡皮筋回弹效果 */
+            -webkit-overflow-scrolling: touch; 
         }
         
         .message { 
@@ -124,7 +133,7 @@
 
     <div class="chat-container">
         <div class="header">
-            AI 助手 <span>✨</span>
+            AI 助手 v6.0 <span>✨</span>
         </div>
         <div class="chat-box" id="chatBox">
             <div id="scrollSentinel"></div>
@@ -143,13 +152,11 @@
         
         // --- 【全局状态】用于打断功能 ---
         let currentAbortController = null; 
-        let typingTimerIds = [];         
+        let typingTimerIds = []; 
         // ------------------------------------
 
         // --- V5.12 新增函数：动态更新哨兵高度 ---
         function updateSentinelHeight() {
-            // 获取 chatBox 的实际可见高度 (clientHeight)
-            // 加上 10px 缓冲，确保有足够的空间将元素推到顶部
             const chatBoxHeight = chatBox.clientHeight;
             scrollSentinel.style.height = (chatBoxHeight + 10) + 'px';
         }
