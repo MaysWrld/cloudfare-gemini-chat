@@ -320,4 +320,138 @@
                 welcomeMessageDiv.classList.add('message', 'ai-message');
                 chatBox.insertBefore(welcomeMessageDiv, scrollSentinel); 
                 
-                displayWelcomeMessage(
+                displayWelcomeMessage(welcomeMessageDiv, welcomeText);
+                
+            } catch (error) {
+                appendMessage('system', '网络错误，懒得跟你解释。');
+            }
+        }
+        
+        // --- V6.1 新增函数：清除会话并重新加载 (保持不变) ---
+        async function startNewChat() {
+            if (!confirm("确定要开启新的聊天吗？当前对话记录将被清空。")) {
+                return;
+            }
+
+            try {
+                stopAllTyping();
+                if (currentAbortController) {
+                    currentAbortController.abort();
+                }
+
+                const response = await fetch('/api/new_chat', { method: 'POST' });
+                
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    alert('清除历史失败，请检查网络或后端配置。');
+                }
+            } catch (error) {
+                alert('网络错误，无法连接到清除会话接口。');
+                console.error('New Chat Error:', error);
+            }
+        }
+
+        // --- handleApiChat (保持不变：直接发送用户问题，由后端 systemInstruction 处理风格) ---
+        async function handleApiChat(aiMessageDiv, finalMessage, signal) {
+            
+            setTimeout(() => { aiMessageDiv.textContent = '思考中...'; }, 100);
+
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        // 直接传递用户问题
+                        contents: [{ role: "user", parts: [{ text: finalMessage }] }] 
+                    }),
+                    signal: signal 
+                });
+
+                if (signal.aborted) {
+                    aiMessageDiv.remove(); 
+                    return; 
+                }
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || '抱歉，AI 返回了空响应。';
+                    
+                    await startTyping(aiMessageDiv, aiText); 
+                    aiMessageDiv.classList.remove('ai-thinking');
+                    
+                } else {
+                    const errorMessage = data.error ? `AI 接口错误：${data.error.message || data.error}` : `请求失败，状态码：${response.status}`;
+                    
+                    aiMessageDiv.classList.remove('ai-thinking');
+                    aiMessageDiv.classList.remove('ai-message'); 
+                    aiMessageDiv.classList.add('system-message');
+                    aiMessageDiv.innerHTML = errorMessage;
+                }
+
+            } catch (error) {
+                if (error.name !== 'AbortError') {
+                    aiMessageDiv.remove(); 
+                    appendMessage('system', '网络连接失败，请重新发送。');
+                    console.error('Chat error:', error);
+                }
+            } finally {
+                currentAbortController = null; 
+                sendButton.disabled = false;
+                messageInput.placeholder = '向 AI 提问...';
+            }
+        }
+
+        // --- 核心功能函数：sendMessage (保持不变) ---
+        async function sendMessage() {
+            const message = messageInput.value.trim();
+            if (message === '') return;
+
+            stopAllTyping(); 
+            if (currentAbortController) {
+                currentAbortController.abort(); 
+                currentAbortController = null;
+                const oldThinking = document.querySelector('.ai-thinking');
+                if (oldThinking) oldThinking.remove(); 
+                appendMessage('system', '🔴 旧操作已中断。'); 
+            }
+
+            const finalMessage = message; 
+
+            const userMessageDiv = appendMessage('user', message); 
+            messageInput.value = '';
+            sendButton.disabled = true;
+            messageInput.placeholder = 'AI 正在思考...';
+            
+            updateSentinelHeight();
+            userMessageDiv.scrollIntoView({ block: 'start', behavior: 'smooth' });
+            
+            currentAbortController = new AbortController();
+
+            setTimeout(() => {
+                const aiMessageDiv = document.createElement('div');
+                aiMessageDiv.classList.add('message', 'ai-message', 'ai-thinking'); 
+                chatBox.insertBefore(aiMessageDiv, scrollSentinel); 
+                
+                handleApiChat(aiMessageDiv, finalMessage, currentAbortController.signal);
+            }, 50);
+        }
+
+        // --- 事件监听器 ---
+        sendButton.addEventListener('click', sendMessage);
+        
+        messageInput.addEventListener('keydown', function(event) {
+            if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
+                event.preventDefault(); 
+                sendMessage();
+            }
+        });
+
+        newChatButton.addEventListener('click', startNewChat);
+
+        document.addEventListener('DOMContentLoaded', fetchConfig);
+        window.addEventListener('resize', updateSentinelHeight);
+    </script>
+</body>
+</html>
