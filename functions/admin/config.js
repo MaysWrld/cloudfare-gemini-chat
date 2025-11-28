@@ -1,11 +1,11 @@
-// /functions/api/admin/config.js - 修复导入路径
+// /functions/admin/config.js - 最终修复版本
 
-// 🚨 修复关键点：将 ../../auth 改为 ../auth
-import { isAuthenticated, getConfig } from '../auth'; 
+// 🚨 路径更新：从 '../auth' 改为 '../api/auth'
+import { isAuthenticated, getConfig } from '../api/auth'; 
 
 /**
  * Pages Function 入口
- * 处理 /api/admin/config 路由请求。
+ * 处理 /admin/config 路由请求。
  * 这是一个受保护的接口，返回所有配置。
  */
 export async function onRequest({ request, env }) {
@@ -13,7 +13,7 @@ export async function onRequest({ request, env }) {
         return new Response('Method Not Allowed', { status: 405 });
     }
 
-    // 1. 权限检查 (代码保持不变，但现在应该能正确导入函数了)
+    // 1. 权限检查 
     try {
         if (!isAuthenticated(request)) {
             return new Response('Unauthorized', { status: 401 });
@@ -26,7 +26,7 @@ export async function onRequest({ request, env }) {
         });
     }
 
-    // 2. 加载和返回配置 (代码保持不变)
+    // 2. 加载和返回配置
     try {
         const config = await getConfig(env);
         
