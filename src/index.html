@@ -71,8 +71,29 @@
             flex-shrink: 0; 
         }
         /* V6.4 新增：确保左右元素大小相同 */
-        .header-title { font-weight: 500; }
+        .header-title { 
+            font-weight: 500; 
+            /* ⭐️ 修正点 1: 确保相对定位 ⭐️ */
+            position: relative; 
+        }
         .header-icon { font-size: 1em; } /* 保持图标和文字大小一致 */
+
+        /* ⭐️ 修正点 1 补充: 加载指示器绝对定位 ⭐️ */
+        #headerLoadingIndicator {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--bg-card); 
+            color: var(--text-main);
+            font-size: 0.8em;
+            z-index: 10;
+            transition: opacity 0.3s;
+        }
 
 
         /* V6.2 精简新聊天图标按钮样式 (保留) */
@@ -160,7 +181,7 @@
         <div class="header">
             <span class="header-title">
                 <span id="appTitleDisplay" style="opacity: 0; transition: opacity 0.3s;">AI 助手 v6.4</span> 
-                <span id="headerLoadingIndicator" style="font-size: 0.8em; color: var(--text-main); transition: opacity 0.3s;">加载中...</span>
+                <span id="headerLoadingIndicator">加载中...</span>
             </span>
             <span class="header-icon">✨</span>
         </div>
@@ -183,7 +204,7 @@
         
         const pageTitleElement = document.getElementById('pageTitle');
         const appTitleDisplayElement = document.getElementById('appTitleDisplay'); 
-        const headerLoadingIndicator = document.getElementById('headerLoadingIndicator'); // ⭐️ 新增元素引用 ⭐️
+        const headerLoadingIndicator = document.getElementById('headerLoadingIndicator'); 
         
         // --- 【全局状态】用于打断功能 ---
         let currentAbortController = null; 
@@ -323,14 +344,14 @@
                 // 网络连接失败
                 appendMessage('system', '网络错误，无法加载配置。');
             } finally {
-                // ⭐️ 修正点 2: 无论成功还是失败，使用 opacity 控制指示器和标题的切换 ⭐️
+                // ⭐️ 修正点 3: 使用 opacity 和 pointer-events 控制 ⭐️
                 if (headerLoadingIndicator) {
-                    headerLoadingIndicator.style.opacity = 0; // 隐藏加载指示器 (淡出)
-                    // 稍后移除它，以防它占用空间，但 opacity=0 已经解决了视觉闪烁
-                    setTimeout(() => headerLoadingIndicator.remove(), 300); 
+                    headerLoadingIndicator.style.opacity = 0; // 隐藏指示器
+                    // 彻底禁用指示器的交互和空间占用
+                    headerLoadingIndicator.style.pointerEvents = 'none'; 
                 }
                 // 让标题平滑可见
-                appTitleDisplayElement.style.opacity = 1; // 标题淡入
+                appTitleDisplayElement.style.opacity = 1; 
             }
         }
         
