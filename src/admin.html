@@ -17,6 +17,12 @@
         </div>
         
         <form id="configForm">
+            
+            <div class="mb-3">
+                <label for="appTitle" class="form-label">应用标题 (Chat 界面头部):</label>
+                <input type="text" id="appTitle" name="appTitle" class="form-control" required placeholder="如：冲哥专属 AI 助手">
+            </div>
+
             <div class="mb-3">
                 <label for="apiUrl" class="form-label">AI API 接口 URL:</label>
                 <input type="url" id="apiUrl" name="apiUrl" class="form-control" required>
@@ -32,6 +38,11 @@
                 <input type="text" id="welcomeMessage" name="welcomeMessage" class="form-control" required>
             </div>
             
+            <div class="mb-3">
+                <label for="personaPrompt" class="form-label">AI 风格指令 (Persona Prompt):</label>
+                <textarea id="personaPrompt" name="personaPrompt" class="form-control" rows="3" required placeholder="定义 AI 的角色和回复风格，如：你是一个带痞气的 AI 助手。"></textarea>
+            </div>
+            
             <button type="submit" class="btn btn-success w-100">保存配置</button>
         </form>
     </div>
@@ -40,7 +51,7 @@
         const statusElement = document.getElementById('status');
         const form = document.getElementById('configForm');
         
-        // 1. 加载现有配置
+        // 1. 加载现有配置 (更新读取逻辑)
         async function loadConfig() {
             try {
                 const response = await fetch('/api/admin'); 
@@ -56,6 +67,11 @@
                     document.getElementById('apiUrl').value = config.apiUrl || '';
                     document.getElementById('apiKey').value = config.apiKey || '';
                     document.getElementById('welcomeMessage').value = config.welcomeMessage || '';
+                    
+                    // 📌 新增：加载新字段
+                    document.getElementById('appTitle').value = config.appTitle || '';
+                    document.getElementById('personaPrompt').value = config.personaPrompt || '';
+                    
                     statusElement.className = 'alert alert-info';
                     statusElement.textContent = '配置加载成功。';
                 } else {
@@ -68,14 +84,18 @@
             }
         }
 
-        // 2. 提交新配置
+        // 2. 提交新配置 (更新提交逻辑)
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            // ... (提交逻辑与之前相同，Bootstrap 样式已内置)
+            
             const data = {
                 apiUrl: document.getElementById('apiUrl').value,
                 apiKey: document.getElementById('apiKey').value,
-                welcomeMessage: document.getElementById('welcomeMessage').value
+                welcomeMessage: document.getElementById('welcomeMessage').value,
+                
+                // 📌 新增：提交新字段
+                appTitle: document.getElementById('appTitle').value,
+                personaPrompt: document.getElementById('personaPrompt').value 
             };
             
             try {
