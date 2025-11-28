@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="light dark"> 
-    <title id="pageTitle">AI 助手 v6.4</title> <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2d000/svg' viewBox='0 0 100 100'><text y='-.1em' x='-.05em' font-size='90'>✨</text></svg>">
+    <title id="pageTitle">AI 助手 v6.4</title> 
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2d000/svg' viewBox='0 0 100 100'><text y='-.1em' x='-.05em' font-size='90'>✨</text></svg>">
     <style>
         /* =================================================== */
         /* === 颜色变量定义：深浅模式切换的核心 (V5.1) === */
@@ -50,11 +51,12 @@
         }
         
         /* =================================================== */
-        /* === 布局和基础样式：V6.4 响应性修复 === */
+        /* === 布局和基础样式：V6.4 基础 === */
         /* =================================================== */
         html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; }
         body { font-family: 'Google Sans', 'Roboto', Arial, sans-serif; background-color: var(--bg-main); display: flex; justify-content: center; align-items: center; color: var(--text-main); }
         
+        /* 确保移动端全屏兼容 */
         .chat-container { 
             width: 100%; 
             height: 100%; 
@@ -67,10 +69,9 @@
             min-height: initial; 
             overflow: hidden; 
         }
-        
         @media (min-width: 961px) { .chat-container { height: 90vh; border-radius: 28px; } }
         
-        /* 头部样式（保持不变） */
+        /* 头部样式 */
         .header { 
             padding: 16px 24px; 
             background-color: var(--bg-card); 
@@ -85,16 +86,381 @@
         }
         .header-title { font-weight: 500; }
         .header-icon { font-size: 1em; } 
+        
+        /* 聊天记录区域 */
+        .chat-box { 
+            flex-grow: 1; 
+            padding: 20px 24px; 
+            overflow-y: auto; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 16px; 
+            scroll-behavior: smooth; 
+            -webkit-overflow-scrolling: touch; 
+        }
+        
+        .message { 
+            padding: 12px 18px; 
+            border-radius: 20px; 
+            max-width: 80%; 
+            line-height: 1.6; 
+            word-wrap: break-word; 
+            font-size: 0.95em; 
+            scroll-margin-top: 20px;
+        }
 
-        /* 新建聊天按钮样式（保持不变） */
-        .input-area .new-chat-icon-button {
-            background: none;
+        .user-message { align-self: flex-end; background-color: var(--color-user); }
+        .ai-message { align-self: flex-start; background-color: var(--color-ai); }
+        .system-message { align-self: center; background-color: var(--color-system-bg); color: var(--color-system-text); font-size: 0.85em; text-align: center; padding: 8px 12px; border-radius: 12px; max-width: 60%; }
+
+        /* ⭐ 新增：气泡内思考动画样式 ⭐ */
+        .thinking-loader {
+            display: flex;
+            align-items: center;
+            font-size: 1em; /* 保持与消息文本一致 */
             color: var(--text-main);
-            border: 1px solid var(--border-main);
-            width: 44px; 
-            height: 44px; 
-            border-radius: 50%; 
-            cursor: pointer;
-            font-size: 1.5em; 
-            font-weight: 300; 
-            transition:
+            opacity: 0.8;
+            padding: 0; /* 继承自 .message 的 padding */
+        }
+        .thinking-loader span {
+            display: inline-block;
+            width: 7px;
+            height: 7px;
+            background-color: var(--color-brand-blue); 
+            border-radius: 50%;
+            margin: 0 3px; 
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+        .thinking-loader span:nth-child(1) { animation-delay: -0.32s; }
+        .thinking-loader span:nth-child(2) { animation-delay: -0.16s; }
+        
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1.0); }
+        }
+
+        /* --- 其他样式保持不变 --- */
+        .input-area { display: flex; padding: 16px 24px; border-top: 1px solid var(--border-main); background-color: var(--bg-card); align-items: center; gap: 10px; flex-shrink: 0; }
+        .input-area .new-chat-icon-button { background: none; color: var(--text-main); border: 1px solid var(--border-main); width: 44px; height: 44px; border-radius: 50%; cursor: pointer; font-size: 1.5em; font-weight: 300; transition: background-color 0.2s, border-color 0.2s; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+        .input-area .new-chat-icon-button:hover { background-color: var(--color-ai); border-color: var(--color-focus-blue); }
+        #messageInput { flex-grow: 1; padding: 12px 18px; border: 1px solid var(--border-main); border-radius: 24px; font-size: 1em; outline: none; transition: border-color 0.2s, box-shadow 0.2s; background-color: var(--bg-input); color: var(--text-main); }
+        #messageInput:focus { border-color: var(--color-focus-blue); box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.2); background-color: var(--bg-card); }
+        #sendButton { padding: 12px 20px; background-color: var(--color-brand-blue); color: white; border: none; border-radius: 24px; cursor: pointer; font-size: 1em; transition: background-color 0.3s, box-shadow 0.3s; display: flex; align-items: center; justify-content: center; }
+        #sendButton:hover { background-color: #1565c0; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); }
+        #sendButton:disabled { background-color: #dadce0; cursor: not-allowed; }
+        #scrollSentinel { min-height: 1px; flex-shrink: 0; visibility: hidden; }
+    </style>
+</head>
+<body>
+
+    <div class="chat-container">
+        <div class="header">
+            <span class="header-title" id="headerTitle">AI 助手 v6.4</span>
+            <span class="header-icon">✨</span>
+        </div>
+        
+        <div class="chat-box" id="chatBox">
+            <div id="scrollSentinel"></div>
+        </div>
+        <div class="input-area">
+            <button id="newChatIcon" class="new-chat-icon-button">+</button>
+            <input type="text" id="messageInput" placeholder="向 AI 提问..." autofocus>
+            <button id="sendButton">发送</button>
+        </div>
+    </div>
+
+    <script>
+        const chatBox = document.getElementById('chatBox');
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+        const newChatButton = document.getElementById('newChatIcon'); 
+        const scrollSentinel = document.getElementById('scrollSentinel');
+        const headerTitle = document.getElementById('headerTitle');
+        const pageTitle = document.getElementById('pageTitle');
+        
+        let currentAbortController = null; 
+        let typingTimerIds = []; 
+
+        const personaPrompt = "你是一个由冲哥调教的带痞气且负责的AI助手。你不用每次都重复这个设定。";
+        
+        function updateSentinelHeight() {
+            const chatBoxHeight = chatBox.clientHeight;
+            scrollSentinel.style.height = (chatBoxHeight + 10) + 'px';
+        }
+
+        function stopAllTyping() {
+            typingTimerIds.forEach(id => clearTimeout(id));
+            typingTimerIds = [];
+        }
+        
+        function renderMarkdown(text) {
+            let htmlText = text;
+            htmlText = htmlText.replace(/```(\w*)\n([\s\S]*?)```/g, function(match, lang, code) {
+                const escapedCode = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                const language = lang ? `<span class="code-lang" style="font-size: 0.8em; color: var(--color-code-lang); display: block; margin-bottom: 5px;">${lang}</span>` : '';
+                return `<pre><code>${language}${escapedCode}</code></pre>`;
+            });
+
+            htmlText = htmlText.replace(/^## (.*$)/gim, '<h2>$1</h2>');
+            htmlText = htmlText.replace(/^\* (.*$)/gim, '<ul><li>$1</li></ul>');
+            htmlText = htmlText.replace(/<\/li>\n<ul>/gim, '</li>'); 
+            htmlText = htmlText.replace(/<\/ul>(\n<ul>)?/gim, '</ul>');
+            
+            htmlText = htmlText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            htmlText = htmlText.replace(/\*(.*?)\*/g, '<em>$1</em>');
+            
+            return htmlText.replace(/\n/g, '<br>');
+        }
+
+        function appendMessage(sender, text) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message');
+            
+            if (sender === 'user') {
+                messageDiv.classList.add('user-message');
+                messageDiv.textContent = text; 
+            } else if (sender === 'ai') {
+                messageDiv.classList.add('ai-message');
+                messageDiv.innerHTML = text;
+            } else { // system
+                messageDiv.classList.add('system-message');
+                messageDiv.innerHTML = text;
+            }
+            
+            chatBox.insertBefore(messageDiv, scrollSentinel);
+            
+            if (sender !== 'user') { 
+                chatBox.scrollTop = chatBox.scrollHeight; 
+            }
+            return messageDiv;
+        }
+        
+        // ⭐ 关键修改 1: startTyping 负责清空动画并开始打字 ⭐
+        function startTyping(messageElement, rawText, delay = 3) { 
+            // 立即清空 AI 气泡，移除动画或任何旧内容
+            messageElement.innerHTML = ''; 
+
+            return new Promise(resolve => {
+                let i = 0;
+                const cursor = '<span style="opacity: 0.8; margin-left: 2px; color: var(--text-main);">▋</span>'; 
+                
+                function type() {
+                    if (i < rawText.length) {
+                        try {
+                            const currentText = rawText.substring(0, i + 1);
+                            messageElement.innerHTML = renderMarkdown(currentText) + cursor;
+                            
+                            i++;
+                            const timerId = setTimeout(type, delay);
+                            typingTimerIds.push(timerId); 
+                        } catch (e) {
+                            console.error("Typing rendering error:", e);
+                            messageElement.innerHTML = renderMarkdown(rawText);
+                            resolve(); 
+                        }
+                    } else {
+                        messageElement.innerHTML = renderMarkdown(rawText);
+                        resolve();
+                    }
+                }
+
+                type();
+            });
+        }
+        
+        function displayWelcomeMessage(welcomeMessageDiv, welcomeText) {
+            let i = 0;
+            const delay = 2; 
+            const cursor = '<span style="opacity: 0.8; margin-left: 2px; color: var(--text-main);">▋</span>'; 
+            
+            function typeWelcome() {
+                if (i < welcomeText.length) {
+                    try {
+                        welcomeMessageDiv.innerHTML = renderMarkdown(welcomeText.substring(0, i + 1)) + cursor;
+                        i++;
+                        const timerId = setTimeout(typeWelcome, delay);
+                        typingTimerIds.push(timerId); 
+                    } catch (e) {
+                        console.error("Welcome message typing error, falling back:", e);
+                        welcomeMessageDiv.innerHTML = renderMarkdown(welcomeText);
+                    }
+                } else {
+                    welcomeMessageDiv.innerHTML = renderMarkdown(welcomeText);
+                }
+            }
+            typeWelcome();
+        }
+
+        async function fetchConfig() {
+            updateSentinelHeight();
+            
+            try {
+                const response = await fetch('/api/config');
+                
+                const defaultWelcome = '喂，小子。你又要问什么？别浪费老子时间。';
+                let welcomeText = defaultWelcome;
+                let appTitle = 'AI 助手 v6.4';
+
+                if (response.ok) {
+                    const config = await response.json();
+                    welcomeText = config.welcomeMessage || defaultWelcome;
+                    appTitle = config.appTitle || appTitle;
+                } else {
+                    appendMessage('ai', '呵，又来了？连个配置都连不上，真没用。');
+                }
+
+                pageTitle.textContent = appTitle;
+                headerTitle.textContent = appTitle;
+                
+                const welcomeMessageDiv = document.createElement('div');
+                welcomeMessageDiv.classList.add('message', 'ai-message');
+                chatBox.insertBefore(welcomeMessageDiv, scrollSentinel); 
+                
+                displayWelcomeMessage(welcomeMessageDiv, welcomeText);
+                
+            } catch (error) {
+                appendMessage('system', '网络错误，懒得跟你解释。');
+                console.error('Fetch config error:', error);
+            }
+        }
+        
+        async function startNewChat() {
+            if (!confirm("确定要开启新的聊天吗？当前对话记录将被清空。")) {
+                return;
+            }
+
+            try {
+                stopAllTyping();
+                if (currentAbortController) {
+                    currentAbortController.abort();
+                }
+
+                const response = await fetch('/api/new_chat', { method: 'POST' });
+                
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    alert('清除历史失败，请检查网络或后端配置。');
+                }
+            } catch (error) {
+                alert('网络错误，无法连接到清除会话接口。');
+                console.error('New Chat Error:', error);
+            }
+        }
+
+        async function handleApiChat(aiMessageDiv, finalMessage, signal) {
+            
+            // ⭐ 移除不必要的 '思考中...' 文本设置
+
+            const fullPrompt = `${personaPrompt}\n\n我的问题是：${finalMessage}`;
+
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ role: "user", parts: [{ text: fullPrompt }] }]
+                    }),
+                    signal: signal 
+                });
+
+                if (signal.aborted) {
+                    aiMessageDiv.remove(); 
+                    return; 
+                }
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || '抱歉，AI 返回了空响应。';
+                    
+                    await startTyping(aiMessageDiv, aiText); 
+                    
+                } else {
+                    const errorMessage = data.error ? `AI 接口错误：${data.error.message || data.error}` : `请求失败，状态码：${response.status}`;
+                    
+                    // 如果失败，清空动画，显示错误
+                    aiMessageDiv.innerHTML = errorMessage;
+                    aiMessageDiv.classList.remove('ai-message'); 
+                    aiMessageDiv.classList.add('system-message');
+                }
+
+            } catch (error) {
+                if (error.name !== 'AbortError') {
+                    aiMessageDiv.remove(); 
+                    appendMessage('system', '网络连接失败，废物。');
+                    console.error('Chat error:', error);
+                }
+            } finally {
+                currentAbortController = null; 
+                sendButton.disabled = false;
+                messageInput.placeholder = '向 AI 提问...';
+            }
+        }
+
+        // ⭐ 关键修改 2: sendMessage 负责插入动画 HTML ⭐
+        async function sendMessage() {
+            const message = messageInput.value.trim();
+            if (message === '') return;
+
+            stopAllTyping(); 
+            if (currentAbortController) {
+                currentAbortController.abort(); 
+                currentAbortController = null;
+                // 确保移除旧的 AI 消息气泡，如果它还在思考中
+                const oldThinkingMessage = chatBox.querySelector('.ai-message .thinking-loader');
+                if (oldThinkingMessage && oldThinkingMessage.parentNode) {
+                    oldThinkingMessage.parentNode.remove();
+                }
+                appendMessage('system', '🔴 旧操作已中断。'); 
+            }
+
+            const finalMessage = message; 
+
+            const userMessageDiv = appendMessage('user', message); 
+            messageInput.value = '';
+            sendButton.disabled = true;
+            messageInput.placeholder = 'AI 正在思考...';
+            
+            updateSentinelHeight();
+            userMessageDiv.scrollIntoView({ block: 'start', behavior: 'smooth' });
+            
+            currentAbortController = new AbortController();
+
+            setTimeout(() => {
+                const aiMessageDiv = document.createElement('div');
+                aiMessageDiv.classList.add('message', 'ai-message'); 
+
+                // ⭐ 插入动画 HTML ⭐
+                aiMessageDiv.innerHTML = `
+                    <div class="thinking-loader">
+                        AI 正在思考...
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                `;
+                
+                chatBox.insertBefore(aiMessageDiv, scrollSentinel); 
+                
+                handleApiChat(aiMessageDiv, finalMessage, currentAbortController.signal);
+            }, 50);
+        }
+
+        // --- 事件监听器 ---
+        sendButton.addEventListener('click', sendMessage);
+        
+        messageInput.addEventListener('keydown', function(event) {
+            if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
+                event.preventDefault(); 
+                sendMessage();
+            }
+        });
+
+        newChatButton.addEventListener('click', startNewChat);
+
+        document.addEventListener('DOMContentLoaded', fetchConfig);
+        window.addEventListener('resize', updateSentinelHeight);
+    </script>
+</body>
+</html>
