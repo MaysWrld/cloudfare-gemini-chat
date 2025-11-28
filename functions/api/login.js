@@ -1,6 +1,6 @@
 // /functions/api/login.js - 最终修复版
 
-import { validateCredentials, createAuthCookie } from '../auth'; 
+import { validateCredentials, createAuthCookie } from './auth';
 
 export async function onRequest({ request, env }) {
     if (request.method !== 'POST') {
