@@ -1,4 +1,4 @@
-// /functions/api/chat.js - 升级版：支持动态模型和温度参数
+// /functions/api/chat.js - 最终修复版：支持动态模型、温度和正确的 systemInstruction
 
 import { isAuthenticated, getConfig } from '../auth';
 
@@ -36,33 +36,25 @@ function generateUuid() {
 
 /**
  * 辅助函数：将历史消息转换为 Gemini API 格式
+ * 📌 修改点 1：移除 personaPrompt 参数，不再在 contents 中插入 system 角色。
  * @param {Array} history 
  * @param {string} userMessage 
- * @param {string} personaPrompt
  * @returns {Array<Object>}
  */
-function buildGeminiContents(history, userMessage, personaPrompt) {
+function buildGeminiContents(history, userMessage) {
     const contents = [];
 
-    // 1. 插入 AI 风格指令作为 System 角色
-    if (personaPrompt) {
-        contents.push({
-            role: "system",
-            parts: [{ text: personaPrompt }]
-        });
-    }
-
-    // 2. 插入历史消息 (最多 MAX_HISTORY_MESSAGES 条)
+    // 历史消息部分 (最多 MAX_HISTORY_MESSAGES 轮对话)
     const historyToUse = history.slice(-MAX_HISTORY_MESSAGES);
     
     for (const msg of historyToUse) {
         contents.push({
-            role: msg.role === 'user' ? 'user' : 'model', // 转换为 Gemini 角色
+            role: msg.role === 'user' ? 'user' : 'model', // 转换为 Gemini 角色 (user/model)
             parts: [{ text: msg.text }]
         });
     }
 
-    // 3. 插入当前用户消息
+    // 插入当前用户消息
     contents.push({
         role: "user",
         parts: [{ text: userMessage }]
@@ -93,8 +85,8 @@ export async function onRequest({ request, env }) {
 
     try {
         const body = await request.json();
-        const userContents = body.contents; // 格式: [{ role: "user", parts: [{ text: "..." }] }]
-        const userMessage = userContents[userContents.length - 1].parts[0].text; // 提取当前用户消息
+        const userContents = body.contents; 
+        const userMessage = userContents[userContents.length - 1].parts[0].text; 
 
         // 1. 获取配置 (包括 API Key, 风格指令, 模型和温度)
         const config = await getConfig(env);
@@ -108,17 +100,25 @@ export async function onRequest({ request, env }) {
         const history = Array.isArray(historyData) ? historyData : [];
         
         // 3. 构造请求体
-        const geminiContents = buildGeminiContents(history, userMessage, config.personaPrompt);
+        // 📌 修改点 2：调用时不再传递 personaPrompt
+        const geminiContents = buildGeminiContents(history, userMessage);
 
-        // ------------------ 🚨 关键改动：使用动态的模型和温度 🚨 ------------------
+        // ------------------ 🚨 关键改动：使用动态的模型、温度和系统指令 🚨 ------------------
         const finalModel = config.modelName || 'gemini-2.5-flash'; // 确保有默认值
         
+        const generationConfig = {
+            // 确保 temperature 是一个浮点数
+            temperature: parseFloat(config.temperature) || 0.7, 
+        };
+
+        // 📌 修改点 3：将 personaPrompt 作为 systemInstruction 放入 generationConfig
+        if (config.personaPrompt) {
+            generationConfig.systemInstruction = config.personaPrompt;
+        }
+
         const geminiRequestBody = {
             contents: geminiContents,
-            generationConfig: { // <-- ✅ 已更正为 generationConfig
-                // 确保 temperature 是一个浮点数
-                temperature: parseFloat(config.temperature) || 0.7, 
-            },
+            generationConfig: generationConfig, 
         };
 
         // 4. 调用 Gemini API
@@ -149,7 +149,7 @@ export async function onRequest({ request, env }) {
             { role: 'user', text: userMessage },
             { role: 'model', text: aiText }
         ];
-        // 保持历史记录长度在 MAX_HISTORY_MESSAGES + 1 轮对话 (即 2*MAX_HISTORY_MESSAGES 条消息)
+        // 保持历史记录长度
         const maxHistoryToSave = (MAX_HISTORY_MESSAGES + 1) * 2; 
         const historyToSave = newHistory.slice(-maxHistoryToSave);
         
