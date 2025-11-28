@@ -44,7 +44,7 @@
 | 配置项 | 示例值 (请替换为您自己的密钥) | 描述 |
 | :--- | :--- | :--- |
 | **API Key** | `AIzaSy...your-actual-key...zXpU` | **必填。** 您从 Google 申请到的密钥。 |
-| **API URL** | `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent` | **必填。** Gemini API 的标准端点（请根据实际使用的模型进行调整）。 |
+| **API URL** | `https://generativelanguage.googleapis.com/v1` | **必填。** Gemini API 的标准端点（请根据实际使用的模型进行调整）。 |
 
 ---
 
