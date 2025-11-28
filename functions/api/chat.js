@@ -1,9 +1,10 @@
-// /functions/api/chat.js - 最终稳定且启用对话记忆版本
+// /functions/api/chat.js - 最终稳定且启用对话记忆版本 (已集成动态风格指令)
 
-import { getConfig } from '../auth'; // 注意：使用导入，不使用内联
+import { getConfig } from '../auth'; 
 
 const HISTORY_TTL = 3600 * 24;
 const SESSION_COOKIE_NAME = 'chat_session_id';
+const MAX_HISTORY_MESSAGES = 10; // 限制历史记录，防止超出上下文窗口
 
 function getSessionData(request) {
     const cookieHeader = request.headers.get('Cookie');
@@ -45,7 +46,30 @@ export async function onRequest({ request, env }) {
             history = JSON.parse(historyJson);
         }
         
-        const contents = [...history, ...clientBody.contents];
+        // ------------------ 🚨 关键改动：集成动态风格指令 🚨 ------------------
+        // 从 config 中读取指令，如果 KV 中没有，则使用默认值
+        const personaPrompt = config.personaPrompt || "你是一个友好的AI助手。"; 
+        
+        // 1. 构造系统指令消息 (以 user 身份发送，并让 AI 确认)
+        const systemInstruction = {
+            role: "user", 
+            parts: [{ text: `系统指令：${personaPrompt}` }]
+        };
+        const systemResponse = { 
+            role: "model", 
+            parts: [{ text: "好的，收到指令，我们将以该风格进行对话。" }] 
+        };
+        
+        // 2. 组合内容：将系统指令、确认回复放在历史记录之前
+        // 注意：这里的 history 是旧的历史记录
+        const contents = [
+            systemInstruction,
+            systemResponse,
+            ...history, 
+            ...clientBody.contents // 用户的最新消息
+        ];
+        // -------------------------------------------------------------------------
+        
         const geminiRequestBody = JSON.stringify({ contents: contents });
         const url = `${config.apiUrl}?key=${config.apiKey}`; 
 
@@ -61,11 +85,15 @@ export async function onRequest({ request, env }) {
             
             if (aiText) {
                 const newUserMessage = clientBody.contents[0]; 
-                const newAiResponse = { role: 'model', parts: [{ text: aiText }] }; 
+                const newAiResponse = { role: 'model', parts: [{ text: aiText }] };
                 
+                // 将新消息和回复加入历史
                 history.push(newUserMessage, newAiResponse);
                 
-                await env.HISTORY.put(sessionId, JSON.stringify(history), { expirationTtl: HISTORY_TTL });
+                // 限制历史记录长度
+                const finalHistory = history.slice(-MAX_HISTORY_MESSAGES);
+                
+                await env.HISTORY.put(sessionId, JSON.stringify(finalHistory), { expirationTtl: HISTORY_TTL });
             }
             
             const response = new Response(JSON.stringify(aiData), {
