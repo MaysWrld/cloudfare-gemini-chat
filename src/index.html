@@ -159,7 +159,7 @@
 
     <div class="chat-container">
         <div class="header">
-            <span class="header-title" id="appTitleDisplay">AI 助手 v6.4</span> <span class="header-icon">✨</span>
+            <span class="header-title" id="appTitleDisplay">AI 助手</span> <span class="header-icon">✨</span>
         </div>
         <div class="chat-box" id="chatBox">
             <div id="scrollSentinel"></div>
@@ -314,7 +314,7 @@
                     appTitleDisplayElement.textContent = appTitle;
 
                     // 默认欢迎语匹配新的指令风格
-                    const defaultWelcome = '喂，小子。你又要问什么？别浪费老子时间。';
+                    const defaultWelcome = '喂。你要问什么？快点。';
                     const welcomeText = config.welcomeMessage || defaultWelcome;
                     
                     const welcomeMessageDiv = document.createElement('div');
@@ -325,7 +325,7 @@
                     
                 } else {
                     // 如果连接成功但认证失败，Admin 会返回 401
-                    appendMessage('ai', '呵，又来了？连个配置都连不上，真没用。');
+                    appendMessage('ai', '呵，又来了？连个配置都连不上。');
                 }
             } catch (error) {
                 // 网络连接失败
@@ -361,7 +361,7 @@
         // --- handleApiChat 📌 关键改动：移除 personaPrompt 拼接 ---
         async function handleApiChat(aiMessageDiv, userMessage, signal) {
             
-            setTimeout(() => { aiMessageDiv.textContent = '思考中...'; }, 100);
+            setTimeout(() => { aiMessageDiv.textContent = '思考中。。。'; }, 100);
 
             // 🚨 移除了 fullPrompt 的构造和 personaPrompt 的硬编码。
             // 🚨 现在的 /api/chat Worker (chat.js) 会自动插入 personaPrompt。
@@ -402,7 +402,7 @@
             } catch (error) {
                 if (error.name !== 'AbortError') {
                     aiMessageDiv.remove(); 
-                    appendMessage('system', '网络连接失败，废物。');
+                    appendMessage('system', '网络连接失败，网络连接失败？看来你连网线都不会插。');
                     console.error('Chat error:', error);
                 }
             } finally {
