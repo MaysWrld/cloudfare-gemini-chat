@@ -1,4 +1,4 @@
-// /functions/api/admin.js - 最终修复版
+// /functions/api/admin.js - 升级版：支持保存 AI 风格指令和应用标题
 
 import { isAuthenticated, getConfig, SETTINGS } from '../auth'; 
 
@@ -6,7 +6,6 @@ export async function onRequest({ request, env }) {
     
     // 1. 检查认证状态
     if (!isAuthenticated(request)) {
-        // ✨ 修改：认证失败时返回 JSON 格式的 401 Unauthorized 响应
         return new Response(JSON.stringify({ error: 'Unauthorized Access. Please log in.' }), { 
             status: 401,
             headers: { 'Content-Type': 'application/json' }
@@ -26,14 +25,21 @@ export async function onRequest({ request, env }) {
         try {
             const newConfig = await request.json();
             
-            // 保留您的原有的数据清理/结构化逻辑
+            // ------------------ 🚨 关键改动：新增配置字段 🚨 ------------------
             const saveConfig = {
+                // 原有字段
                 apiUrl: newConfig.apiUrl || '',
                 apiKey: newConfig.apiKey || '',
                 welcomeMessage: newConfig.welcomeMessage || '欢迎使用 AI 助手！',
+                
+                // 新增字段
+                appTitle: newConfig.appTitle || 'AI 助手', // 默认值
+                personaPrompt: newConfig.personaPrompt || '你是一个友好的AI助手。', // 默认值
             };
+            // -------------------------------------------------------------------------
 
             // 假设 env.CONFIG 是您的 KV 绑定
+            // 假设 SETTINGS.CONFIG_KEY 是保存配置的 KV 键名
             await env.CONFIG.put(SETTINGS.CONFIG_KEY, JSON.stringify(saveConfig));
 
             return new Response(JSON.stringify({ message: "配置已成功保存！" }), { 
