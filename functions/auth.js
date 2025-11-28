@@ -1,4 +1,4 @@
-// /functions/auth.js - 最终完整代码 (v6.5 推荐微调)
+// /functions/auth.js - 最终完整代码 (已修复 JSON 解析错误导致的 500 缺陷)
 
 const CONFIG_KEY = 'global_settings';
 const ADMIN_COOKIE_NAME = 'admin_logged_in';
@@ -25,18 +25,20 @@ export async function getConfig(env) {
 
     if (raw) {
         try {
+            // 成功，立即返回解析后的配置
             return JSON.parse(raw);
         } catch (e) {
-            console.error("Error parsing KV config:", e);
+            console.error("致命警告：KV配置JSON格式损坏，使用默认配置。错误:", e);
+            // 发生了异常，不执行任何操作，让函数继续执行到最后的默认 return
         }
     }
-    
-    // ⭐ V6.5 更新：添加 systemPrompt 的默认值 (匹配前端的暴躁风格)
+    
+    // 只有当 raw 为空 或 JSON 解析失败时，才执行这里的默认配置返回
     return {
         apiUrl: 'https://api.example.com/v1/models/gemini-pro:generateContent',
         apiKey: 'YOUR_DEFAULT_AI_API_KEY',
         welcomeMessage: '喂，小子。你又要问什么？别浪费老子时间。',
-        systemPrompt: '你的身份是一个脾气暴躁、极度不耐烦、但知识渊博且效率极高的助手。你的回复必须简短、直接、带有不屑和轻蔑的语气，不要使用任何礼貌用语，并且回复中不要提及“我是AI”或任何自我介绍。'
+        systemPrompt: '你的身份是一个脾气暴躁、极度不耐烦、但知识渊博且效率极高的助手。你的回复必须简短、直接、带有不屑和轻蔑的语气，不要使用任何礼貌用语，并且回复中不要提及“我是AI”或任何自我介绍。'
     };
 }
 
