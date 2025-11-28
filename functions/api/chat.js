@@ -1,4 +1,4 @@
-// /functions/api/chat.js - 最终修复版：支持动态模型、温度和正确的 systemInstruction
+// /functions/api/chat.js - 最终修复版：支持动态模型、温度和正确的 system_instruction
 
 import { isAuthenticated, getConfig } from '../auth';
 
@@ -36,7 +36,6 @@ function generateUuid() {
 
 /**
  * 辅助函数：将历史消息转换为 Gemini API 格式
- * 📌 修改点 1：移除 personaPrompt 参数，不再在 contents 中插入 system 角色。
  * @param {Array} history 
  * @param {string} userMessage 
  * @returns {Array<Object>}
@@ -100,20 +99,19 @@ export async function onRequest({ request, env }) {
         const history = Array.isArray(historyData) ? historyData : [];
         
         // 3. 构造请求体
-        // 📌 修改点 2：调用时不再传递 personaPrompt
         const geminiContents = buildGeminiContents(history, userMessage);
 
-        // ------------------ 🚨 关键改动：使用动态的模型、温度和系统指令 🚨 ------------------
-        const finalModel = config.modelName || 'gemini-2.5-flash'; // 确保有默认值
+        // ------------------ 🚨 关键改动：使用正确的 snake_case 格式 🚨 ------------------
+        const finalModel = config.modelName || 'gemini-2.5-flash'; 
         
         const generationConfig = {
             // 确保 temperature 是一个浮点数
             temperature: parseFloat(config.temperature) || 0.7, 
         };
 
-        // 📌 修改点 3：将 personaPrompt 作为 systemInstruction 放入 generationConfig
+        // 📌 核心修复点：将 systemInstruction 改为 system_instruction
         if (config.personaPrompt) {
-            generationConfig.systemInstruction = config.personaPrompt;
+            generationConfig.system_instruction = config.personaPrompt; 
         }
 
         const geminiRequestBody = {
