@@ -1,127 +1,171 @@
-// /functions/api/chat.js - 最终稳定且启用对话记忆版本 (已集成动态风格指令)
+// /functions/api/chat.js - 升级版：支持动态模型和温度参数
 
-import { getConfig } from '../auth'; 
+import { isAuthenticated, getConfig } from '../auth';
 
-const HISTORY_TTL = 3600 * 24;
+const MAX_HISTORY_MESSAGES = 10; // 最大历史消息数量
+
 const SESSION_COOKIE_NAME = 'chat_session_id';
-const MAX_HISTORY_MESSAGES = 10; // 限制历史记录，防止超出上下文窗口
+const COOKIE_TTL_SECONDS = 3600 * 24 * 30; // 30天
 
-function getSessionData(request) {
+/**
+ * 辅助函数：从请求头中获取会话ID (Session ID)
+ * @param {Request} request 
+ * @returns {string | null}
+ */
+function getSessionId(request) {
     const cookieHeader = request.headers.get('Cookie');
-    let sessionId;
-    let setCookieHeader = null;
-
     if (cookieHeader) {
         const cookies = cookieHeader.split(';').map(c => c.trim().split('='));
-        const existingSessionId = cookies.find(([name]) => name === SESSION_COOKIE_NAME)?.[1];
-        if (existingSessionId) {
-            sessionId = existingSessionId;
-        }
+        const sessionId = cookies.find(([name]) => name === SESSION_COOKIE_NAME)?.[1];
+        return sessionId;
     }
-    
-    if (!sessionId) {
-        sessionId = (Date.now() + Math.random()).toString(36).replace('.', '');
-        
-        const isSecure = request.url.startsWith('https://');
-        setCookieHeader = `${SESSION_COOKIE_NAME}=${sessionId}; Max-Age=${HISTORY_TTL}; Path=/; HttpOnly; SameSite=Strict${isSecure ? '; Secure' : ''}`;
-    }
-
-    return { sessionId, setCookieHeader };
+    return null;
 }
 
-export async function onRequest({ request, env }) {
-    if (request.method !== 'POST') {
-        return new Response('Method Not Allowed', { status: 405 });
+/**
+ * 辅助函数：生成一个唯一的 Session ID (UUID)
+ * @returns {string}
+ */
+function generateUuid() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}
+
+
+/**
+ * 辅助函数：将历史消息转换为 Gemini API 格式
+ * @param {Array} history 
+ * @param {string} userMessage 
+ * @param {string} personaPrompt
+ * @returns {Array<Object>}
+ */
+function buildGeminiContents(history, userMessage, personaPrompt) {
+    const contents = [];
+
+    // 1. 插入 AI 风格指令作为 System 角色
+    if (personaPrompt) {
+        contents.push({
+            role: "system",
+            parts: [{ text: personaPrompt }]
+        });
     }
 
-    const config = await getConfig(env);
-    const { sessionId, setCookieHeader } = getSessionData(request);
+    // 2. 插入历史消息 (最多 MAX_HISTORY_MESSAGES 条)
+    const historyToUse = history.slice(-MAX_HISTORY_MESSAGES);
+    
+    for (const msg of historyToUse) {
+        contents.push({
+            role: msg.role === 'user' ? 'user' : 'model', // 转换为 Gemini 角色
+            parts: [{ text: msg.text }]
+        });
+    }
+
+    // 3. 插入当前用户消息
+    contents.push({
+        role: "user",
+        parts: [{ text: userMessage }]
+    });
+
+    return contents;
+}
+
+
+/**
+ * Worker 请求处理入口
+ * @param {Object} env 环境对象
+ * @returns {Response}
+ */
+export async function onRequest({ request, env }) {
+    if (request.method !== 'POST') {
+        return new Response(JSON.stringify({ error: 'Method Not Allowed' }), { status: 405 });
+    }
+
+    let sessionId = getSessionId(request);
+    let setCookie = false;
+
+    // 如果没有会话ID，生成一个新的
+    if (!sessionId) {
+        sessionId = generateUuid();
+        setCookie = true;
+    }
 
     try {
-        const clientBody = await request.json();
-        let history = [];
+        const body = await request.json();
+        const userContents = body.contents; // 格式: [{ role: "user", parts: [{ text: "..." }] }]
+        const userMessage = userContents[userContents.length - 1].parts[0].text; // 提取当前用户消息
 
-        const historyJson = await env.HISTORY.get(sessionId);
-        if (historyJson) {
-            history = JSON.parse(historyJson);
+        // 1. 获取配置 (包括 API Key, 风格指令, 模型和温度)
+        const config = await getConfig(env);
+
+        if (!config.apiKey || !config.apiUrl) {
+            return new Response(JSON.stringify({ error: 'AI API Key 或 URL 未配置。请联系管理员。' }), { status: 500 });
         }
         
-        // ------------------ 🚨 关键改动：集成动态风格指令 🚨 ------------------
-        // 从 config 中读取指令，如果 KV 中没有，则使用默认值
-        const personaPrompt = config.personaPrompt || "你是一个友好的AI助手。"; 
+        // 2. 加载历史记录
+        const historyData = await env.HISTORY.get(sessionId, { type: 'json' });
+        const history = Array.isArray(historyData) ? historyData : [];
         
-        // 1. 构造系统指令消息 (以 user 身份发送，并让 AI 确认)
-        const systemInstruction = {
-            role: "user", 
-            parts: [{ text: `系统指令：${personaPrompt}` }]
-        };
-        const systemResponse = { 
-            role: "model", 
-            parts: [{ text: "好的，收到指令，我们将以该风格进行对话。" }] 
-        };
-        
-        // 2. 组合内容：将系统指令、确认回复放在历史记录之前
-        // 注意：这里的 history 是旧的历史记录
-        const contents = [
-            systemInstruction,
-            systemResponse,
-            ...history, 
-            ...clientBody.contents // 用户的最新消息
-        ];
-        // -------------------------------------------------------------------------
-        
-        const geminiRequestBody = JSON.stringify({ contents: contents });
-        const url = `${config.apiUrl}?key=${config.apiKey}`; 
+        // 3. 构造请求体
+        const geminiContents = buildGeminiContents(history, userMessage, config.personaPrompt);
 
-        const aiResponse = await fetch(url, {
+        // ------------------ 🚨 关键改动：使用动态的模型和温度 🚨 ------------------
+        const finalModel = config.modelName || 'gemini-2.5-flash'; // 确保有默认值
+        
+        const geminiRequestBody = {
+            contents: geminiContents,
+            config: {
+                // 确保 temperature 是一个浮点数
+                temperature: parseFloat(config.temperature) || 0.7, 
+            },
+        };
+
+        // 4. 调用 Gemini API
+        const apiResponse = await fetch(config.apiUrl.replace(/\/$/, '') + '/models/' + finalModel + ':generateContent?key=' + config.apiKey, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: geminiRequestBody, 
+            body: JSON.stringify(geminiRequestBody)
         });
-
-        if (aiResponse.ok) {
-            const aiData = await aiResponse.json();
-            const aiText = aiData.candidates?.[0]?.content?.parts?.[0]?.text;
-            
-            if (aiText) {
-                const newUserMessage = clientBody.contents[0]; 
-                const newAiResponse = { role: 'model', parts: [{ text: aiText }] };
-                
-                // 将新消息和回复加入历史
-                history.push(newUserMessage, newAiResponse);
-                
-                // 限制历史记录长度
-                const finalHistory = history.slice(-MAX_HISTORY_MESSAGES);
-                
-                await env.HISTORY.put(sessionId, JSON.stringify(finalHistory), { expirationTtl: HISTORY_TTL });
-            }
-            
-            const response = new Response(JSON.stringify(aiData), {
-                status: 200,
-                headers: { 'Content-Type': 'application/json' }
-            });
-
-            if (setCookieHeader) {
-                response.headers.set('Set-Cookie', setCookieHeader);
-            }
-
-            return response;
-
-        } else {
-            const errorBody = await aiResponse.text();
-            const errorResponse = new Response(errorBody, {
-                status: aiResponse.status,
-                headers: { 'Content-Type': aiResponse.headers.get('Content-Type') || 'application/json' }
-            });
-            
-            if (setCookieHeader) {
-                errorResponse.headers.set('Set-Cookie', setCookieHeader);
-            }
-            return errorResponse;
+        
+        const data = await apiResponse.json();
+        
+        if (!apiResponse.ok) {
+            // 检查是否有 API 错误信息
+            const errorMessage = data.error?.message || apiResponse.statusText;
+            return new Response(JSON.stringify({ error: errorMessage, status: apiResponse.status }), { status: apiResponse.status });
+        }
+        
+        // 5. 提取 AI 响应文本
+        const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        
+        if (!aiText) {
+             return new Response(JSON.stringify({ error: 'AI 返回了一个空响应。' }), { status: 500 });
         }
 
+        // 6. 更新历史记录
+        const newHistory = [
+            ...history,
+            { role: 'user', text: userMessage },
+            { role: 'model', text: aiText }
+        ];
+        // 保持历史记录长度在 MAX_HISTORY_MESSAGES + 1 轮对话 (即 2*MAX_HISTORY_MESSAGES 条消息)
+        const maxHistoryToSave = (MAX_HISTORY_MESSAGES + 1) * 2; 
+        const historyToSave = newHistory.slice(-maxHistoryToSave);
+        
+        await env.HISTORY.put(sessionId, JSON.stringify(historyToSave), { expirationTtl: COOKIE_TTL_SECONDS });
+
+        // 7. 构造响应头
+        const headers = { 'Content-Type': 'application/json' };
+        if (setCookie) {
+            headers['Set-Cookie'] = `${SESSION_COOKIE_NAME}=${sessionId}; Path=/; Max-Age=${COOKIE_TTL_SECONDS}; HttpOnly; Secure; SameSite=Strict`;
+        }
+
+        // 8. 返回 AI 响应
+        return new Response(JSON.stringify(data), { status: 200, headers: headers });
+
     } catch (error) {
-        console.error("AI Request Error:", error);
-        return new Response(JSON.stringify({ error: "代理请求失败，或致命运行时错误。" }), { status: 500 });
+        console.error("Chat Worker Error:", error);
+        return new Response(JSON.stringify({ error: `系统错误: ${error.message}` }), { status: 500 });
     }
 }
