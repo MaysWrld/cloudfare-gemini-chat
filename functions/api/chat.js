@@ -1,4 +1,4 @@
-// /functions/api/chat.js - 最终修复版：支持动态模型、温度和正确的 system_instruction
+// /functions/api/chat.js - 最终兼容版：解决 system_instruction 错误
 
 import { isAuthenticated, getConfig } from '../auth';
 
@@ -7,11 +7,6 @@ const MAX_HISTORY_MESSAGES = 10; // 最大历史消息数量
 const SESSION_COOKIE_NAME = 'chat_session_id';
 const COOKIE_TTL_SECONDS = 3600 * 24 * 30; // 30天
 
-/**
- * 辅助函数：从请求头中获取会话ID (Session ID)
- * @param {Request} request 
- * @returns {string | null}
- */
 function getSessionId(request) {
     const cookieHeader = request.headers.get('Cookie');
     if (cookieHeader) {
@@ -22,10 +17,6 @@ function getSessionId(request) {
     return null;
 }
 
-/**
- * 辅助函数：生成一个唯一的 Session ID (UUID)
- * @returns {string}
- */
 function generateUuid() {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
         var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
@@ -36,38 +27,42 @@ function generateUuid() {
 
 /**
  * 辅助函数：将历史消息转换为 Gemini API 格式
+ * 📌 关键修改：将 personaPrompt 传回，并作为前缀添加到首个用户消息中
  * @param {Array} history 
  * @param {string} userMessage 
+ * @param {string} personaPrompt // 重新引入 personaPrompt 参数
  * @returns {Array<Object>}
  */
-function buildGeminiContents(history, userMessage) {
+function buildGeminiContents(history, userMessage, personaPrompt) {
     const contents = [];
+    
+    // 检查是否为第一条消息，并且有风格指令
+    let finalUserMessage = userMessage;
+    if (history.length === 0 && personaPrompt) {
+        // 将风格指令作为前缀添加到第一条消息中，以保证兼容性
+        finalUserMessage = `[System Instruction: ${personaPrompt}]\n\n${userMessage}`;
+    }
 
     // 历史消息部分 (最多 MAX_HISTORY_MESSAGES 轮对话)
     const historyToUse = history.slice(-MAX_HISTORY_MESSAGES);
     
     for (const msg of historyToUse) {
         contents.push({
-            role: msg.role === 'user' ? 'user' : 'model', // 转换为 Gemini 角色 (user/model)
+            role: msg.role === 'user' ? 'user' : 'model', 
             parts: [{ text: msg.text }]
         });
     }
 
-    // 插入当前用户消息
+    // 插入当前用户消息 (可能是包含了风格指令的 finalUserMessage)
     contents.push({
         role: "user",
-        parts: [{ text: userMessage }]
+        parts: [{ text: finalUserMessage }]
     });
 
     return contents;
 }
 
 
-/**
- * Worker 请求处理入口
- * @param {Object} env 环境对象
- * @returns {Response}
- */
 export async function onRequest({ request, env }) {
     if (request.method !== 'POST') {
         return new Response(JSON.stringify({ error: 'Method Not Allowed' }), { status: 405 });
@@ -76,7 +71,6 @@ export async function onRequest({ request, env }) {
     let sessionId = getSessionId(request);
     let setCookie = false;
 
-    // 如果没有会话ID，生成一个新的
     if (!sessionId) {
         sessionId = generateUuid();
         setCookie = true;
@@ -87,21 +81,19 @@ export async function onRequest({ request, env }) {
         const userContents = body.contents; 
         const userMessage = userContents[userContents.length - 1].parts[0].text; 
 
-        // 1. 获取配置 (包括 API Key, 风格指令, 模型和温度)
         const config = await getConfig(env);
 
         if (!config.apiKey || !config.apiUrl) {
             return new Response(JSON.stringify({ error: 'AI API Key 或 URL 未配置。请联系管理员。' }), { status: 500 });
         }
         
-        // 2. 加载历史记录
         const historyData = await env.HISTORY.get(sessionId, { type: 'json' });
         const history = Array.isArray(historyData) ? historyData : [];
         
-        // 3. 构造请求体
-        const geminiContents = buildGeminiContents(history, userMessage);
+        // 📌 关键修改：将 personaPrompt 传给 buildGeminiContents
+        const geminiContents = buildGeminiContents(history, userMessage, config.personaPrompt);
 
-        // ------------------ 🚨 关键改动：使用正确的 snake_case 格式 🚨 ------------------
+        // ------------------ 🚨 配置对象中只保留 temperature 🚨 ------------------
         const finalModel = config.modelName || 'gemini-2.5-flash'; 
         
         const generationConfig = {
@@ -109,11 +101,8 @@ export async function onRequest({ request, env }) {
             temperature: parseFloat(config.temperature) || 0.7, 
         };
 
-        // 📌 核心修复点：将 systemInstruction 改为 system_instruction
-        if (config.personaPrompt) {
-            generationConfig.system_instruction = config.personaPrompt; 
-        }
-
+        // 彻底移除 system_instruction，由 buildGeminiContents 负责插入
+        
         const geminiRequestBody = {
             contents: geminiContents,
             generationConfig: generationConfig, 
@@ -129,12 +118,10 @@ export async function onRequest({ request, env }) {
         const data = await apiResponse.json();
         
         if (!apiResponse.ok) {
-            // 检查是否有 API 错误信息
             const errorMessage = data.error?.message || apiResponse.statusText;
             return new Response(JSON.stringify({ error: errorMessage, status: apiResponse.status }), { status: apiResponse.status });
         }
         
-        // 5. 提取 AI 响应文本
         const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
         
         if (!aiText) {
@@ -144,10 +131,11 @@ export async function onRequest({ request, env }) {
         // 6. 更新历史记录
         const newHistory = [
             ...history,
-            { role: 'user', text: userMessage },
+            // 注意：这里保存到历史记录中的 user 消息仍然是原始 userMessage，不带 system prompt
+            { role: 'user', text: userMessage }, 
             { role: 'model', text: aiText }
         ];
-        // 保持历史记录长度
+        
         const maxHistoryToSave = (MAX_HISTORY_MESSAGES + 1) * 2; 
         const historyToSave = newHistory.slice(-maxHistoryToSave);
         
@@ -159,7 +147,6 @@ export async function onRequest({ request, env }) {
             headers['Set-Cookie'] = `${SESSION_COOKIE_NAME}=${sessionId}; Path=/; Max-Age=${COOKIE_TTL_SECONDS}; HttpOnly; Secure; SameSite=Strict`;
         }
 
-        // 8. 返回 AI 响应
         return new Response(JSON.stringify(data), { status: 200, headers: headers });
 
     } catch (error) {
