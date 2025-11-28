@@ -55,7 +55,7 @@
             padding: 0;
         }
         
-        /* --- 响应式布局优化 (步骤三) --- */
+        /* --- 响应式布局优化 --- */
         .chat-container {
             display: flex;
             flex-direction: column;
@@ -116,7 +116,7 @@
             margin: 0 auto;
         }
 
-        /* --- 代码块优化 (步骤一) --- */
+        /* --- 代码块优化 --- */
         .ai-message pre {
             position: relative;
             background-color: #272822 !important; /* Monokai background */
@@ -162,7 +162,7 @@
             background: none !important; 
         }
 
-        /* 📌 新增：表格样式 (步骤一) */
+        /* 表格样式 */
         .ai-message table {
             width: 100%;
             margin: 1em 0;
@@ -180,7 +180,7 @@
             font-weight: bold;
         }
         
-        /* 📌 新增：打字光标 */
+        /* 打字光标 */
         .typing::after {
             content: '|';
             animation: blink 1s step-end infinite;
@@ -249,7 +249,7 @@
         // UI & RENDERING FUNCTIONS
         // =======================================================
 
-        // 📌 核心渲染函数：支持 Markdown、表格、代码高亮和复制
+        // 核心渲染函数：支持 Markdown、表格、代码高亮和复制
         function renderMarkdown(element, markdownText) {
             // 1. 基本 Markdown 转换（简单实现，不引入重型库）
             let html = markdownText
@@ -364,7 +364,9 @@
             isSending = true;
             sendButton.disabled = true;
             messageInput.disabled = true;
-            typingIndicator.style.display = 'flex';
+            
+            // 📌 修正点 1: 在发送请求前显示加载动画
+            typingIndicator.style.display = 'flex'; 
             scrollHistoryToBottom();
 
             currentAbortController = new AbortController();
@@ -391,6 +393,7 @@
                     signal: currentAbortController.signal
                 });
 
+                // 📌 修正点 2: 收到响应后立即隐藏加载指示器
                 typingIndicator.style.display = 'none';
 
                 if (!response.ok) {
@@ -419,7 +422,8 @@
 
             } catch (error) {
                 if (error.name !== 'AbortError') {
-                    typingIndicator.style.display = 'none';
+                    // 📌 修正点 3: 确保错误发生时隐藏
+                    typingIndicator.style.display = 'none'; 
                     stopAllTyping();
                     const errorMessage = error.message.includes('AI 接口错误') ? error.message : `网络/系统错误: ${error.message}`;
                     // 在 AI 消息区域显示错误
@@ -434,6 +438,8 @@
                         isSending = false;
                         sendButton.disabled = false;
                         messageInput.disabled = false;
+                        // 📌 修正点 4: 确保打字完成后最终隐藏
+                        typingIndicator.style.display = 'none'; 
                         clearInterval(checkTyping);
                     }
                 }, 100);
@@ -481,6 +487,8 @@
             } catch (error) {
                 console.warn('Failed to fetch config:', error);
             }
+            // 📌 修正点 5: 在初始化结束时强制隐藏加载动画
+            typingIndicator.style.display = 'none'; 
         }
 
         // --- New Chat Function (As previously provided) ---
