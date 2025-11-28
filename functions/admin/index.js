@@ -1,6 +1,6 @@
 // functions/admin/index.js (页面重定向逻辑)
 
-import { isAuthenticated } from '../auth'; // 注意路径，相对于 functions/admin/
+import { isAuthenticated } from '../api/auth';// 注意路径，相对于 functions/admin/
 
 export async function onRequest(context) {
     const { request, next } = context;
