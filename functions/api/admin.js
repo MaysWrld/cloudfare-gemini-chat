@@ -1,4 +1,4 @@
-// /functions/api/admin.js - 升级版：支持保存 AI 风格指令和应用标题
+// /functions/api/admin.js - 升级版：支持保存 AI 风格指令、应用标题、模型名称和温度
 
 import { isAuthenticated, getConfig, SETTINGS } from '../auth'; 
 
@@ -25,21 +25,29 @@ export async function onRequest({ request, env }) {
         try {
             const newConfig = await request.json();
             
-            // ------------------ 🚨 关键改动：新增配置字段 🚨 ------------------
+            // ------------------ 🚨 关键改动：新增模型和温度字段 🚨 ------------------
+            // 确保温度在 0.0 到 1.0 之间
+            let temperature = parseFloat(newConfig.temperature);
+            if (isNaN(temperature) || temperature < 0.0 || temperature > 1.0) {
+                temperature = 0.7; // 默认值
+            }
+            
             const saveConfig = {
-                // 原有字段
+                // 基础配置
                 apiUrl: newConfig.apiUrl || '',
                 apiKey: newConfig.apiKey || '',
                 welcomeMessage: newConfig.welcomeMessage || '欢迎使用 AI 助手！',
                 
-                // 新增字段
-                appTitle: newConfig.appTitle || 'AI 助手', // 默认值
-                personaPrompt: newConfig.personaPrompt || '你是一个友好的AI助手。', // 默认值
+                // 动态 UI / Persona 配置
+                appTitle: newConfig.appTitle || 'AI 助手',
+                personaPrompt: newConfig.personaPrompt || '你是一个友好的AI助手。',
+                
+                // 模型和参数配置 (新增)
+                modelName: newConfig.modelName || 'gemini-2.5-flash', // 默认模型
+                temperature: temperature, 
             };
             // -------------------------------------------------------------------------
 
-            // 假设 env.CONFIG 是您的 KV 绑定
-            // 假设 SETTINGS.CONFIG_KEY 是保存配置的 KV 键名
             await env.CONFIG.put(SETTINGS.CONFIG_KEY, JSON.stringify(saveConfig));
 
             return new Response(JSON.stringify({ message: "配置已成功保存！" }), { 
