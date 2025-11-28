@@ -138,6 +138,27 @@
         .ai-message ul { padding-left: 20px; margin-top: 5px; margin-bottom: 5px; list-style: disc; }
         .ai-message strong { font-weight: 700; }
 
+        /* 🚀 V6.5 新增：Markdown 表格样式 */
+        .ai-message table {
+            border-collapse: collapse; /* 合并边框 */
+            margin: 15px 0;
+            max-width: 100%;
+            overflow-x: auto; /* 确保表格溢出时可以滚动 */
+            display: block; /* 允许在小屏幕上滚动 */
+        }
+        .ai-message th, .ai-message td {
+            border: 1px solid var(--border-main);
+            padding: 8px 12px;
+            text-align: left;
+            vertical-align: top;
+        }
+        .ai-message th {
+            background-color: var(--color-ai); /* 使用 AI 消息背景色 */
+            font-weight: 600;
+            color: var(--text-header);
+        }
+        /* 🚀 V6.5 新增：表格样式结束 */
+
         /* 输入区域样式 */
         .input-area { display: flex; padding: 16px 24px; border-top: 1px solid var(--border-main); background-color: var(--bg-card); align-items: center; gap: 10px; flex-shrink: 0; }
         
@@ -186,9 +207,6 @@
         let typingTimerIds = []; 
         // ------------------------------------
 
-        // 🎯 风格个性指令 (V6.4 更新：已移除硬编码，由 getConfig 加载)
-        // ----------------------------------------------------
-
         // --- V5.12 新增函数：动态更新哨兵高度 (保持不变) ---
         function updateSentinelHeight() {
             const chatBoxHeight = chatBox.clientHeight;
@@ -201,15 +219,93 @@
             typingTimerIds = [];
         }
         
-        // --- 辅助函数：Markdown 渲染 (保持不变) ---
+        // --- 🚀 V6.5 核心改动：辅助函数：Markdown 渲染 (新增表格解析逻辑) ---
         function renderMarkdown(text) {
             let htmlText = text;
+
+            // 1. 处理代码块 (必须在所有其他行级解析之前完成)
             htmlText = htmlText.replace(/```(\w*)\n([\s\S]*?)```/g, function(match, lang, code) {
                 const escapedCode = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
                 const language = lang ? `<span class="code-lang" style="font-size: 0.8em; color: var(--color-code-lang); display: block; margin-bottom: 5px;">${lang}</span>` : '';
                 return `<pre><code>${language}${escapedCode}</code></pre>`;
             });
 
+            // 2. 表格解析 (基于行分割的多行处理)
+            const lines = htmlText.split('\n');
+            let outputLines = [];
+            let inTable = false;
+            let headerCells = 0; // 用于验证分隔线和内容行
+
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                
+                // 检查是否是表格分隔线（例如：|---|:---|---:）
+                const isSeparator = line.match(/^\|[ \t]*([: \-]*?\|)+[ \t]*$/);
+
+                if (!inTable && line.match(/^\|.*?\|$/) && i + 1 < lines.length && lines[i+1].trim().match(/^\|[ \t]*([: \-]*?\|)+[ \t]*$/)) {
+                    // 发现表格头和分隔符：| Header | Header | \n |---|---|
+                    const headerLine = lines[i];
+                    
+                    // 开启表格结构
+                    outputLines.push('<table><thead><tr>');
+                    
+                    // 解析 Header 行，注意：split('|') 会在首尾产生空字符串，故使用 slice(1, -1)
+                    const headers = headerLine.split('|').slice(1, -1);
+                    headerCells = headers.length;
+                    
+                    // 渲染表头
+                    headers.forEach(header => {
+                        outputLines.push(`<th>${header.trim()}</th>`);
+                    });
+
+                    outputLines.push('</tr></thead><tbody>');
+                    inTable = true;
+                    i++; // 跳过分隔行
+                    continue;
+                } else if (inTable && line.match(/^\|.*?\|$/)) {
+                    // 表格内容行
+                    const cells = line.split('|').slice(1, -1);
+                    
+                    // 简单的列数校验，防止意外换行或数据错误导致表格错乱
+                    if (cells.length === headerCells) {
+                        outputLines.push('<tr>');
+                        cells.forEach(cell => {
+                            outputLines.push(`<td>${cell.trim()}</td>`);
+                        });
+                        outputLines.push('</tr>');
+                    } else {
+                        // 列数不匹配，结束表格并处理为普通行
+                        outputLines.push('</tbody></table>');
+                        inTable = false;
+                        outputLines.push(line);
+                    }
+                    continue;
+                } else if (inTable && line === '') {
+                    // 遇到空行，结束表格
+                    outputLines.push('</tbody></table>');
+                    inTable = false;
+                    continue;
+                } else if (inTable) {
+                    // 遇到非表格行，结束表格
+                    outputLines.push('</tbody></table>');
+                    inTable = false;
+                    outputLines.push(line);
+                } else {
+                    // 普通行
+                    outputLines.push(line);
+                }
+            }
+            
+            // 确保表格在文件末尾被关闭
+            if (inTable) {
+                outputLines.push('</tbody></table>');
+            }
+
+            // 将处理后的行重新合并为 htmlText
+            htmlText = outputLines.join('\n');
+
+
+            // 3. 处理标题、列表和强调（在表格和代码块之后处理）
             htmlText = htmlText.replace(/^## (.*$)/gim, '<h2>$1</h2>');
             htmlText = htmlText.replace(/^\* (.*$)/gim, '<ul><li>$1</li></ul>');
             htmlText = htmlText.replace(/<\/li>\n<ul>/gim, '</li>'); 
@@ -218,8 +314,10 @@
             htmlText = htmlText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
             htmlText = htmlText.replace(/\*(.*?)\*/g, '<em>$1</em>');
             
+            // 4. 替换最后的换行符为 <br>
             return htmlText.replace(/\n/g, '<br>');
         }
+        // --- Markdown 渲染函数修改结束 ---
 
         // --- 核心功能函数：appendMessage (保持不变) ---
         function appendMessage(sender, text) {
@@ -252,6 +350,9 @@
                     if (i < rawText.length) {
                         try {
                             const currentText = rawText.substring(0, i + 1);
+                            // 注意：这里调用 renderMarkdown 会对部分渲染的内容进行重复处理（如 H2, 列表），
+                            // 但由于表格解析是基于完整文本进行的，在打字机过程中，表格不会完全显示，
+                            // 实际的渲染会在字符级别进行，效果是可以接受的。
                             messageElement.innerHTML = renderMarkdown(currentText) + cursor;
                             
                             i++;
@@ -296,24 +397,21 @@
             typeWelcome();
         }
 
-        // --- fetchConfig 📌 关键改动：读取 appTitle 和 welcomeMessage ---
+        // --- fetchConfig (保持不变) ---
         async function fetchConfig() {
             updateSentinelHeight();
             
             try {
-                // 假设 /api/config 现在返回 appTitle 和 welcomeMessage
                 const response = await fetch('/api/admin'); 
                 
                 if (response.ok) {
                     const config = await response.json();
                     
-                    // 动态更新页面标题和聊天头部标题
                     const defaultAppTitle = 'AI 助手';
                     const appTitle = config.appTitle || defaultAppTitle;
                     pageTitleElement.textContent = appTitle;
                     appTitleDisplayElement.textContent = appTitle;
 
-                    // 默认欢迎语匹配新的指令风格
                     const defaultWelcome = '喂。你要问什么？快点。';
                     const welcomeText = config.welcomeMessage || defaultWelcome;
                     
@@ -324,16 +422,14 @@
                     displayWelcomeMessage(welcomeMessageDiv, welcomeText);
                     
                 } else {
-                    // 如果连接成功但认证失败，Admin 会返回 401
                     appendMessage('ai', '呵，又来了？连个配置都连不上。');
                 }
             } catch (error) {
-                // 网络连接失败
                 appendMessage('system', '网络错误，懒得跟你解释。');
             }
         }
         
-        // --- V6.1 新增函数：清除会话并重新加载 (保持不变) ---
+        // --- startNewChat (保持不变) ---
         async function startNewChat() {
             if (!confirm("确定要开启新的聊天吗？当前对话记录将被清空。")) {
                 return;
@@ -358,20 +454,16 @@
             }
         }
 
-        // --- handleApiChat 📌 关键改动：移除 personaPrompt 拼接 ---
+        // --- handleApiChat (保持不变) ---
         async function handleApiChat(aiMessageDiv, userMessage, signal) {
             
             setTimeout(() => { aiMessageDiv.textContent = '思考中。。。'; }, 100);
-
-            // 🚨 移除了 fullPrompt 的构造和 personaPrompt 的硬编码。
-            // 🚨 现在的 /api/chat Worker (chat.js) 会自动插入 personaPrompt。
             
             try {
                 const response = await fetch('/api/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        // 只发送用户的原始消息
                         contents: [{ role: "user", parts: [{ text: userMessage }] }] 
                     }),
                     signal: signal 
@@ -447,7 +539,7 @@
             }, 50);
         }
 
-        // --- 事件监听器 ---
+        // --- 事件监听器 (保持不变) ---
         sendButton.addEventListener('click', sendMessage);
         
         messageInput.addEventListener('keydown', function(event) {
