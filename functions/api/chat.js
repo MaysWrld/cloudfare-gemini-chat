@@ -1,6 +1,6 @@
 // /functions/api/chat.js - 最终稳定且启用对话记忆版本 (升级支持 System Prompt)
 
-import { getConfig } from '../auth'; // 注意：使用导入，不使用内联
+import { getConfig } from './auth';// 注意：使用导入，不使用内联
 
 const HISTORY_TTL = 3600 * 24;
 const SESSION_COOKIE_NAME = 'chat_session_id';
