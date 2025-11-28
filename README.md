@@ -1,6 +1,6 @@
 
 
-## 📝 Gemini Chat 6.0 版本使用说明与配置指南
+## 📝 Gemini Chat 6.9 版本使用说明与配置指南
 
 本项目是一个基于 **Cloudflare Pages Functions** 和 **KV 命名空间** 构建的 AI 聊天应用前端代理，支持多轮对话记忆和管理员配置。
 
