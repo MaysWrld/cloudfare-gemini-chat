@@ -115,7 +115,7 @@ export async function onRequest({ request, env }) {
         
         const geminiRequestBody = {
             contents: geminiContents,
-            config: {
+            generationConfig: { // <-- ✅ 已更正为 generationConfig
                 // 确保 temperature 是一个浮点数
                 temperature: parseFloat(config.temperature) || 0.7, 
             },
