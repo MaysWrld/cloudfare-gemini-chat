@@ -1,106 +1,117 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>AI 配置管理</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        .config-container { max-width: 600px; margin: 40px auto; padding: 20px; background-color: #fff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
-    </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AI 配置管理</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .config-container { max-width: 600px; margin: 40px auto; padding: 20px; background-color: #fff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
+        /* 确保 textarea 填满容器 */
+        #systemPrompt { resize: vertical; }
+    </style>
 </head>
 <body>
-    <div class="container config-container">
-        <h1 class="mb-4 text-center">AI 配置管理</h1>
-        <div id="status" class="alert alert-success" role="alert">
-            请使用浏览器弹出的登录框输入管理员凭证。
-        </div>
-        
-        <form id="configForm">
+    <div class="container config-container">
+        <h1 class="mb-4 text-center">AI 配置管理</h1>
+        <div id="status" class="alert alert-success" role="alert">
+            请使用浏览器弹出的登录框输入管理员凭证。
+        </div>
+        
+        <form id="configForm">
+            <div class="mb-3">
+                <label for="apiUrl" class="form-label">AI API 接口 URL:</label>
+                <input type="url" id="apiUrl" name="apiUrl" class="form-control" required>
+            </div>
+            
+            <div class="mb-3">
+                <label for="apiKey" class="form-label">AI API Key (密钥):</label>
+                <input type="text" id="apiKey" name="apiKey" class="form-control" required>
+            </div>
+            
+            <div class="mb-3">
+                <label for="welcomeMessage" class="form-label">对话欢迎语:</label>
+                <input type="text" id="welcomeMessage" name="welcomeMessage" class="form-control" required>
+            </div>
+
             <div class="mb-3">
-                <label for="apiUrl" class="form-label">AI API 接口 URL:</label>
-                <input type="url" id="apiUrl" name="apiUrl" class="form-control" required>
-            </div>
-            
-            <div class="mb-3">
-                <label for="apiKey" class="form-label">AI API Key (密钥):</label>
-                <input type="text" id="apiKey" name="apiKey" class="form-control" required>
-            </div>
-            
-            <div class="mb-3">
-                <label for="welcomeMessage" class="form-label">对话欢迎语:</label>
-                <input type="text" id="welcomeMessage" name="welcomeMessage" class="form-control" required>
-            </div>
-            
-            <button type="submit" class="btn btn-success w-100">保存配置</button>
-        </form>
-    </div>
+                <label for="systemPrompt" class="form-label">AI 助手系统提示词 (System Prompt):</label>
+                <textarea id="systemPrompt" name="systemPrompt" rows="5" class="form-control" placeholder="设置 AI 的角色、语气或核心指令。"></textarea>
+                <small class="form-text text-muted">定义 AI 的身份和行为风格，会影响所有用户的对话。</small>
+            </div>
+                        
+            <button type="submit" class="btn btn-success w-100">保存配置</button>
+        </form>
+    </div>
 
-    <script>
-        const statusElement = document.getElementById('status');
-        const form = document.getElementById('configForm');
-        
-        // 1. 加载现有配置
-        async function loadConfig() {
-            try {
-                const response = await fetch('/api/admin'); 
-                
-                if (response.status === 401) {
-                    statusElement.className = 'alert alert-danger';
-                    statusElement.textContent = '认证失败。请刷新页面重新输入凭证。';
-                    return;
-                }
+    <script>
+        const statusElement = document.getElementById('status');
+        const form = document.getElementById('configForm');
+        
+        // 1. 加载现有配置
+        async function loadConfig() {
+            try {
+                const response = await fetch('/api/admin'); 
+                
+                if (response.status === 401) {
+                    statusElement.className = 'alert alert-danger';
+                    statusElement.textContent = '认证失败。请刷新页面重新输入凭证。';
+                    return;
+                }
 
-                if (response.ok) {
-                    const config = await response.json();
-                    document.getElementById('apiUrl').value = config.apiUrl || '';
-                    document.getElementById('apiKey').value = config.apiKey || '';
-                    document.getElementById('welcomeMessage').value = config.welcomeMessage || '';
-                    statusElement.className = 'alert alert-info';
-                    statusElement.textContent = '配置加载成功。';
-                } else {
-                    statusElement.className = 'alert alert-warning';
-                    statusElement.textContent = `加载配置失败，状态码: ${response.status}`;
-                }
-            } catch (error) {
-                statusElement.className = 'alert alert-danger';
-                statusElement.textContent = '网络请求错误。';
-            }
-        }
+                if (response.ok) {
+                    const config = await response.json();
+                    document.getElementById('apiUrl').value = config.apiUrl || '';
+                    document.getElementById('apiKey').value = config.apiKey || '';
+                    document.getElementById('welcomeMessage').value = config.welcomeMessage || '';
+                    // 🌟 关键修改 A: 从后端加载 systemPrompt
+                    document.getElementById('systemPrompt').value = config.systemPrompt || ''; 
+                    statusElement.className = 'alert alert-info';
+                    statusElement.textContent = '配置加载成功。';
+                } else {
+                    statusElement.className = 'alert alert-warning';
+                    statusElement.textContent = `加载配置失败，状态码: ${response.status}`;
+                }
+            } catch (error) {
+                statusElement.className = 'alert alert-danger';
+                statusElement.textContent = '网络请求错误。';
+            }
+        }
 
-        // 2. 提交新配置
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            // ... (提交逻辑与之前相同，Bootstrap 样式已内置)
-            const data = {
-                apiUrl: document.getElementById('apiUrl').value,
-                apiKey: document.getElementById('apiKey').value,
-                welcomeMessage: document.getElementById('welcomeMessage').value
-            };
-            
-            try {
-                const response = await fetch('/api/admin', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                });
-                
-                const result = await response.json();
+        // 2. 提交新配置
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            // 🌟 关键修改 B: 构建 POST 请求体时加入 systemPrompt
+            const data = {
+                apiUrl: document.getElementById('apiUrl').value,
+                apiKey: document.getElementById('apiKey').value,
+                welcomeMessage: document.getElementById('welcomeMessage').value,
+                systemPrompt: document.getElementById('systemPrompt').value // <-- 新增
+            };
+            
+            try {
+                const response = await fetch('/api/admin', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
 
-                if (response.ok) {
-                    statusElement.className = 'alert alert-success';
-                    statusElement.textContent = result.message;
-                } else {
-                    statusElement.className = 'alert alert-danger';
-                    statusElement.textContent = `保存失败: ${result.error || response.statusText}`;
-                }
-            } catch (error) {
-                statusElement.className = 'alert alert-danger';
-                statusElement.textContent = '保存时发生网络错误。';
-            }
-        });
+                if (response.ok) {
+                    statusElement.className = 'alert alert-success';
+                    statusElement.textContent = result.message;
+                } else {
+                    statusElement.className = 'alert alert-danger';
+                    statusElement.textContent = `保存失败: ${result.error || response.statusText}`;
+                }
+            } catch (error) {
+                statusElement.className = 'alert alert-danger';
+                statusElement.textContent = '保存时发生网络错误。';
+            }
+        });
 
-        loadConfig();
-    </script>
+        loadConfig();
+    </script>
 </body>
 </html>
