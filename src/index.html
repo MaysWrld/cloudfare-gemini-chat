@@ -390,7 +390,7 @@
             } catch (error) {
                 if (error.name !== 'AbortError') {
                     aiMessageDiv.remove(); 
-                    appendMessage('system', '网络连接失败，废物。');
+                    appendMessage('system', '网络连接失败，请重新发送。');
                     console.error('Chat error:', error);
                 }
             } finally {
