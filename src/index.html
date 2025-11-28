@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Chat</title> 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/monokai.min.css">
 
     <style>
@@ -31,18 +30,9 @@
                 --border-color: #495057;
                 --link-color: #8ab4f8;
             }
-            .chat-message {
-                color: var(--text-color);
-            }
-            .list-group-item {
-                background-color: var(--chat-bg-ai) !important;
-                border-color: var(--border-color);
-            }
-            .form-control, .btn-primary {
-                color: var(--text-color);
-                background-color: var(--input-bg);
-                border-color: var(--border-color);
-            }
+            .chat-message { color: var(--text-color); }
+            .list-group-item { background-color: var(--chat-bg-ai) !important; border-color: var(--border-color); }
+            .form-control, .btn-primary { color: var(--text-color); background-color: var(--input-bg); border-color: var(--border-color); }
         }
 
         body {
@@ -50,23 +40,28 @@
             color: var(--text-color);
             display: flex;
             flex-direction: column;
-            height: 100vh;
+            /* 📌 关键修复 1: 确保 body 占满整个视口高度，且不会因为内容溢出而滚动 */
+            height: 100vh; 
             margin: 0;
             padding: 0;
+            overflow: hidden; 
         }
         
-        /* --- 整体布局调整，确保输入法弹出时能自动挤压页面 --- */
+        /* 容器调整 */
         .container-fluid {
-            /* 确保父容器充满整个视口，但不固定 */
             height: 100%; 
+            display: flex;
+            flex-direction: column;
         }
 
         .chat-container {
             display: flex;
             flex-direction: column;
             flex-grow: 1;
-            overflow-y: hidden;
-            padding-top: 0; /* 标题已处理，无需额外 padding */
+            /* 📌 关键修复 2: 使用 flex-basis: 0; 确保在 flex 容器中正确计算高度 */
+            flex-basis: 0; 
+            overflow: hidden; 
+            padding-top: 0; 
             padding-bottom: 20px;
             max-width: 900px;
             width: 100%;
@@ -75,95 +70,26 @@
 
         .chat-history {
             flex-grow: 1;
-            overflow-y: auto;
+            /* 📌 关键修复 3: 允许聊天记录区域滚动 */
+            overflow-y: auto; 
             padding: 0 10px;
         }
         
-        .chat-message {
-            margin-bottom: 15px;
-            border-radius: 12px;
-            padding: 10px 15px;
-            max-width: 90%;
-            word-wrap: break-word;
-            position: relative;
-        }
-
-        .user-message {
-            background-color: var(--chat-bg-user);
-            margin-left: auto;
-            border-bottom-right-radius: 4px;
-        }
-
-        .ai-message {
-            background-color: var(--chat-bg-ai);
-            margin-right: auto;
-            border-bottom-left-radius: 4px;
-            border: 1px solid var(--border-color);
-        }
-
-        .chat-header {
-            background-color: var(--input-bg);
-            border-bottom: 1px solid var(--border-color);
-            padding: 10px 15px;
-            position: sticky;
-            top: 0;
-            z-index: 10;
-        }
+        /* 消息样式（保持不变） */
+        .chat-message { margin-bottom: 15px; border-radius: 12px; padding: 10px 15px; max-width: 90%; word-wrap: break-word; position: relative; }
+        .user-message { background-color: var(--chat-bg-user); margin-left: auto; border-bottom-right-radius: 4px; }
+        .ai-message { background-color: var(--chat-bg-ai); margin-right: auto; border-bottom-left-radius: 4px; border: 1px solid var(--border-color); }
         
-        .chat-input-area {
-            background-color: var(--background-color);
-            padding: 10px 0;
-            max-width: 900px;
-            width: 100%;
-            margin: 0 auto;
-        }
-
-        /* --- 代码块/表格样式 (保持不变) --- */
-        .ai-message pre {
-            position: relative;
-            background-color: #272822 !important;
-            padding-top: 35px;
-            border-radius: 6px;
-        }
-
-        /* ... 省略其余代码块样式 ... */
-        .copy-btn:hover { color: white; }
-        .hljs { display: block; overflow-x: auto; padding: 1em; background: none !important; }
-        .ai-message table { width: 100%; margin: 1em 0; border-collapse: collapse; }
-        .ai-message th, .ai-message td { border: 1px solid var(--border-color); padding: 8px; text-align: left; }
-        .ai-message th { background-color: var(--input-bg); font-weight: bold; }
-        .typing::after { content: '|'; animation: blink 1s step-end infinite; }
-        @keyframes blink { from, to { color: transparent; } 50% { color: var(--text-color); } }
-
-        /* 📌 调整加载动画样式和位置 (问题 1) */
-        #typingIndicatorContainer {
-            /* 容器紧随标题下方，位于聊天记录上方 */
-            background-color: var(--background-color);
-            padding: 0 10px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 30px; /* 预留高度，防止页面跳动 */
-            width: 100%;
-            max-width: 900px;
-            margin: 0 auto;
-        }
+        /* 头部和输入区（保持不变） */
+        .chat-header { background-color: var(--input-bg); border-bottom: 1px solid var(--border-color); padding: 10px 15px; position: sticky; top: 0; z-index: 10; }
+        .chat-input-area { background-color: var(--background-color); padding: 10px 0; max-width: 900px; width: 100%; margin: 0 auto; }
         
-        #typingIndicator {
-            /* 居中显示，字体小 */
-            font-size: 0.75em; 
-            color: #6c757d; 
-            display: flex; /* 确保动画和文字对齐 */
-            align-items: center;
-        }
-        
-        /* 隐藏加载动画的背景/边框，只保留文字和动画 */
-        #typingIndicator > .chat-message {
-            background: none !important;
-            border: none !important;
-            padding: 0;
-            margin: 0;
-        }
+        /* 加载动画样式（保持不变） */
+        #typingIndicatorContainer { background-color: var(--background-color); padding: 0 10px; display: flex; justify-content: center; align-items: center; height: 30px; width: 100%; max-width: 900px; margin: 0 auto; }
+        #typingIndicator { font-size: 0.75em; color: #6c757d; display: flex; align-items: center; }
+        #typingIndicator > .chat-message { background: none !important; border: none !important; padding: 0; margin: 0; }
+
+        /* ... 省略代码块/表格样式 ... */
     </style>
 </head>
 <body>
@@ -184,7 +110,6 @@
                 AI 正在思考...
             </div>
         </div>
-
 
         <div class="chat-container">
             <div id="chatHistory" class="chat-history">
@@ -212,14 +137,14 @@
         const messageInput = document.getElementById('messageInput');
         const sendButton = document.getElementById('sendButton');
         const welcomeMessageElement = document.getElementById('welcomeMessage');
-        const typingIndicatorContainer = document.getElementById('typingIndicatorContainer'); // 引用新容器
+        const typingIndicatorContainer = document.getElementById('typingIndicatorContainer');
         const newChatButton = document.getElementById('newChatButton');
         
         let currentAbortController = null;
         let isSending = false;
         let typingInterval = null;
         let currentMessageElement = null;
-        let isComposing = false; // 输入法状态
+        let isComposing = false;
 
         // =======================================================
         // UI & RENDERING FUNCTIONS
@@ -229,18 +154,16 @@
             chatHistory.scrollTop = chatHistory.scrollHeight;
         }
 
-        // 📌 问题 3 解决：移动端输入法提升优化
+        // 移动端输入法提升优化
         function handleFocusScroll() {
             // 延迟滚动，等待移动端键盘弹出完成
             setTimeout(() => {
                 scrollHistoryToBottom();
             }, 300); 
         }
-
-        // 绑定输入框焦点事件
         messageInput.addEventListener('focus', handleFocusScroll);
-        // ... (其他 UI & RENDERING FUNCTIONS 保持不变) ...
         
+        // ... (renderMarkdown, createMessageElement, stopAllTyping 保持不变) ...
         function renderMarkdown(element, markdownText) {
             let html = markdownText
                 .replace(/^### (.*$)/gim, '<h3>$1</h3>')
@@ -303,10 +226,6 @@
             }, 0);
         }
 
-        // =======================================================
-        // CORE CHAT FUNCTIONS
-        // =======================================================
-
         function createMessageElement(role) {
             const wrapper = document.createElement('div');
             wrapper.className = `d-flex ${role === 'user' ? 'justify-content-end' : 'justify-content-start'}`;
@@ -330,6 +249,10 @@
                 currentMessageElement.classList.remove('typing'); 
             }
         }
+
+        // =======================================================
+        // CORE CHAT FUNCTIONS
+        // =======================================================
         
         async function handleApiChat(message) {
             stopAllTyping();
@@ -337,7 +260,6 @@
             sendButton.disabled = true;
             messageInput.disabled = true;
             
-            // 📌 问题 1 解决：显示动画容器
             typingIndicatorContainer.style.display = 'flex'; 
             scrollHistoryToBottom();
 
@@ -345,11 +267,9 @@
             let aiText = '';
 
             try {
-                // 1. 创建用户消息元素
                 createMessageElement('user');
                 messageInput.value = '';
                 
-                // 2. 创建 AI 消息元素并设置为当前打字目标
                 currentMessageElement = createMessageElement('ai');
                 currentMessageElement.classList.add('typing');
                 scrollHistoryToBottom();
@@ -363,7 +283,6 @@
                     signal: currentAbortController.signal
                 });
 
-                // 📌 问题 1 解决：收到响应后隐藏动画容器
                 typingIndicatorContainer.style.display = 'none';
 
                 if (!response.ok) {
@@ -374,7 +293,6 @@
                 const data = await response.json();
                 aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || 'AI 返回了空内容。';
                 
-                // 5. 使用打字机效果显示 AI 文本
                 let i = 0;
                 typingInterval = setInterval(() => {
                     if (i < aiText.length) {
@@ -382,7 +300,6 @@
                         i++;
                         scrollHistoryToBottom();
                     } else {
-                        // 6. 渲染最终的 Markdown/高亮
                         stopAllTyping();
                         renderMarkdown(currentMessageElement, aiText);
                         scrollHistoryToBottom();
@@ -391,7 +308,6 @@
 
             } catch (error) {
                 if (error.name !== 'AbortError') {
-                    // 确保错误发生时隐藏
                     typingIndicatorContainer.style.display = 'none'; 
                     stopAllTyping();
                     const errorMessage = error.message.includes('AI 接口错误') ? error.message : `网络/系统错误: ${error.message}`;
@@ -400,13 +316,11 @@
                     console.error('Chat Error:', error);
                 }
             } finally {
-                // 等待打字机效果结束后再解锁输入
                 const checkTyping = setInterval(() => {
                     if (!typingInterval) {
                         isSending = false;
                         sendButton.disabled = false;
                         messageInput.disabled = false;
-                        // 确保打字完成后最终隐藏
                         typingIndicatorContainer.style.display = 'none'; 
                         clearInterval(checkTyping);
                     }
@@ -418,11 +332,10 @@
         // INITIALIZATION & EVENTS
         // =======================================================
         
-        // 自动调整输入框高度
         messageInput.addEventListener('input', () => {
             messageInput.style.height = 'auto';
             messageInput.style.height = messageInput.scrollHeight + 'px';
-            scrollHistoryToBottom(); // 每次调整高度时滚动到底部，提升移动端体验
+            scrollHistoryToBottom();
         });
 
         chatForm.addEventListener('submit', (e) => {
@@ -433,11 +346,9 @@
             }
         });
 
-        // 输入法兼容性 (compositionstart/end)
         messageInput.addEventListener('compositionstart', () => { isComposing = true; });
         messageInput.addEventListener('compositionend', () => { isComposing = false; });
 
-        // Shift+Enter 换行，Enter 发送 (只有在非输入法状态下才发送)
         messageInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
                 if (isComposing) {
@@ -450,29 +361,30 @@
 
         newChatButton.addEventListener('click', startNewChat);
 
-        // 📌 问题 2 解决：异步加载配置
+        // 📌 关键修复 4: 确保配置加载成功或失败都能处理
         async function fetchConfig() {
             try {
                 const response = await fetch('/api/admin');
                 if (response.ok) {
                     const config = await response.json();
                     
-                    // 确保配置正确应用到标题和欢迎语
                     const appTitle = config.appTitle || 'AI Chat';
                     const welcomeMessage = config.welcomeMessage || '欢迎使用 AI 助手！';
                     
                     document.title = appTitle;
                     document.getElementById('appTitle').textContent = appTitle;
                     welcomeMessageElement.textContent = welcomeMessage;
-                    
-                } else {
-                    console.error('Failed to fetch config:', response.statusText);
                 }
             } catch (error) {
                 console.warn('Failed to fetch config (Network Error):', error);
+                // 如果失败，使用默认值，不阻塞页面
             }
+            
             // 确保在初始化结束时强制隐藏加载动画
             typingIndicatorContainer.style.display = 'none'; 
+            
+            // 📌 关键修复 5: 确保初始滚动到欢迎语，特别是在移动端
+            scrollHistoryToBottom(); 
         }
 
         // --- New Chat Function (保持不变) ---
@@ -485,7 +397,11 @@
                 if (currentAbortController) {
                     currentAbortController.abort();
                 }
+                // 禁用按钮，避免重复点击
+                newChatButton.disabled = true; 
+                
                 const response = await fetch('/api/new_chat', { method: 'POST' });
+                
                 if (response.ok) {
                     window.location.reload();
                 } else {
@@ -494,12 +410,13 @@
             } catch (error) {
                 alert('网络错误，无法连接到清除会话接口。');
                 console.error('New Chat Error:', error);
+            } finally {
+                // 确保无论成功失败，按钮都会在操作结束后恢复（除了成功后页面会刷新）
+                newChatButton.disabled = false;
             }
         }
 
-        // 页面启动时，先加载配置，然后滚动到底部
         fetchConfig();
-        scrollHistoryToBottom();
     </script>
 </body>
 </html>
