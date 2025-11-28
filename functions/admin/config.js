@@ -1,7 +1,7 @@
 // /functions/admin/config.js - 最终修复版本
 
 // 🚨 路径更新：从 '../auth' 改为 '../api/auth'
-import { isAuthenticated, getConfig } from '../api/auth'; 
+import { isAuthenticated, getConfig } from '../api/auth';
 
 /**
  * Pages Function 入口
