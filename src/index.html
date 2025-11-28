@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="light dark"> 
-    <title id="pageTitle">AI 助手</title> <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2d000/svg' viewBox='0 0 100 100'><text y='-.1em' x='-.05em' font-size='90'>✨</text></svg>">
+    <title id="pageTitle">AI 助手 v7</title> <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2d000/svg' viewBox='0 0 100 100'><text y='-.1em' x='-.05em' font-size='90'>✨</text></svg>">
     <style>
         /* =================================================== */
         /* === 颜色变量定义：深浅模式切换的核心 (V5.1) === */
@@ -158,7 +158,7 @@
 
     <div class="chat-container">
         <div class="header">
-            <span class="header-title" id="appTitleDisplay">AI 助手</span> <span class="header-icon">✨</span>
+            <span class="header-title" id="appTitleDisplay">。。。</span> <span class="header-icon">✨</span>
         </div>
         <div class="chat-box" id="chatBox">
             <div id="scrollSentinel"></div>
@@ -179,8 +179,7 @@
         
         const pageTitleElement = document.getElementById('pageTitle');
         const appTitleDisplayElement = document.getElementById('appTitleDisplay'); 
-        // const headerLoadingIndicator = document.getElementById('headerLoadingIndicator'); // 移除
-
+        
         // --- 【全局状态】用于打断功能 ---
         let currentAbortController = null; 
         let typingTimerIds = []; 
@@ -301,8 +300,8 @@
                     const appTitle = config.appTitle || defaultAppTitle;
                     pageTitleElement.textContent = appTitle;
                     appTitleDisplayElement.textContent = appTitle;
-                    
-                    const defaultWelcome = '欢迎使用 AI 助手！';
+
+                    const defaultWelcome = '喂，小子。你又要问什么？别浪费老子时间。';
                     const welcomeText = config.welcomeMessage || defaultWelcome;
                     
                     const welcomeMessageDiv = document.createElement('div');
@@ -313,13 +312,12 @@
                     
                 } else {
                     // 如果连接成功但认证失败，Admin 会返回 401
-                    appendMessage('ai', '配置加载失败，使用了默认欢迎语。');
+                    appendMessage('ai', '呵，又来了？连个配置都连不上，真没用。');
                 }
             } catch (error) {
                 // 网络连接失败
-                appendMessage('system', '网络错误，无法加载配置。');
-            } 
-            // ⭐️ 移除 finally 块中的所有标题加载控制逻辑 ⭐️
+                appendMessage('system', '网络错误，懒得跟你解释。');
+            }
         }
         
         // --- V6.1 修正：新增函数：清除会话并重新加载 (包含诊断代码) ---
@@ -339,15 +337,18 @@
                 if (response.ok) {
                     window.location.reload();
                 } else {
+                    // ⭐️ 临时诊断性修改：捕获详细错误信息 ⭐️
                     let errorText = `状态码：${response.status}`;
                     try {
                         const data = await response.json();
                         errorText += `\n消息：${data.error || data.message || JSON.stringify(data)}`;
                     } catch {
+                        // 如果不是 JSON 响应
                         const text = await response.text();
                         errorText += `\n响应文本：${text.substring(0, 100)}...`; 
                     }
                     alert(`清除历史失败，请检查网络或后端配置。\n详细错误：${errorText}`); 
+                    // ⭐️ 临时诊断性修改结束 ⭐️
                 }
             } catch (error) {
                 alert('网络错误，无法连接到清除会话接口。');
@@ -396,7 +397,7 @@
             } catch (error) {
                 if (error.name !== 'AbortError') {
                     aiMessageDiv.remove(); 
-                    appendMessage('system', '网络连接失败。');
+                    appendMessage('system', '网络连接失败，废物。');
                     console.error('Chat error:', error);
                 }
             } finally {
