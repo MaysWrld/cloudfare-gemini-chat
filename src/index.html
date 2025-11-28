@@ -25,11 +25,11 @@
             :root {
                 --background-color: #212529;
                 --text-color: #f8f9fa;
-                --chat-bg-user: #3a4750; /* Slightly darker blue-grey for user */
-                --chat-bg-ai: #2c353d; /* Darker grey for AI */
+                --chat-bg-user: #3a4750;
+                --chat-bg-ai: #2c353d;
                 --input-bg: #343a40;
                 --border-color: #495057;
-                --link-color: #8ab4f8; /* Light blue for links */
+                --link-color: #8ab4f8;
             }
             .chat-message {
                 color: var(--text-color);
@@ -63,7 +63,6 @@
             overflow-y: hidden;
             padding-top: 20px;
             padding-bottom: 20px;
-            /* 确保在极宽屏幕上居中且有最大宽度 */
             max-width: 900px;
             width: 100%;
             margin: 0 auto;
@@ -81,7 +80,7 @@
             padding: 10px 15px;
             max-width: 90%;
             word-wrap: break-word;
-            position: relative; /* For the typing cursor */
+            position: relative;
         }
 
         .user-message {
@@ -94,7 +93,6 @@
             background-color: var(--chat-bg-ai);
             margin-right: auto;
             border-bottom-left-radius: 4px;
-            /* 确保 AI 消息的宽度适应内容，但在 dark mode 下可见 */
             border: 1px solid var(--border-color);
         }
 
@@ -110,7 +108,6 @@
         .chat-input-area {
             background-color: var(--background-color);
             padding: 10px 0;
-            /* 确保输入区在极宽屏幕上和聊天容器对齐 */
             max-width: 900px;
             width: 100%;
             margin: 0 auto;
@@ -119,8 +116,8 @@
         /* --- 代码块优化 --- */
         .ai-message pre {
             position: relative;
-            background-color: #272822 !important; /* Monokai background */
-            padding-top: 35px; /* Space for the header */
+            background-color: #272822 !important;
+            padding-top: 35px;
             border-radius: 6px;
         }
 
@@ -158,7 +155,6 @@
             display: block;
             overflow-x: auto;
             padding: 1em;
-            /* 移除 highlight.js 默认的 background，由 pre 标签控制 */
             background: none !important; 
         }
 
@@ -189,6 +185,28 @@
             from, to { color: transparent; }
             50% { color: var(--text-color); }
         }
+
+        /* 📌 调整加载动画样式和位置 (修复 1) */
+        #typingIndicator {
+            /* 居中显示在聊天区域上方 */
+            margin-top: 10px;
+            margin-bottom: 10px;
+            justify-content: center;
+            align-items: center;
+            /* 字体大小调整为标题的一半 */
+            font-size: 0.75em; 
+            /* 移除 chat-message 样式，使其更像一个状态提示 */
+            padding: 5px 10px;
+            color: #6c757d; /* muted color */
+        }
+        
+        /* 隐藏加载动画的背景/边框，只保留文字和动画 */
+        #typingIndicator > .chat-message {
+            background: none !important;
+            border: none !important;
+            padding: 0;
+            margin: 0;
+        }
     </style>
 </head>
 <body>
@@ -202,22 +220,21 @@
         </div>
 
         <div class="chat-container">
+            <div id="typingIndicator" class="d-flex justify-content-start" style="display: none;">
+                <div class="chat-message ai-message">
+                    <span class="spinner-grow spinner-grow-sm me-2" role="status" aria-hidden="true"></span>
+                    <span class="spinner-grow spinner-grow-sm me-2" role="status" aria-hidden="true"></span>
+                    <span class="spinner-grow spinner-grow-sm" role="status" aria-hidden="true"></span>
+                    AI 正在思考...
+                </div>
+            </div>
+            
             <div id="chatHistory" class="chat-history">
                 <div class="d-flex justify-content-start">
                     <div id="welcomeMessage" class="chat-message ai-message">
                         欢迎使用 AI 助手！
                     </div>
                 </div>
-                
-                <div id="typingIndicator" class="d-flex justify-content-start" style="display: none;">
-                    <div class="chat-message ai-message">
-                        <span class="spinner-grow spinner-grow-sm me-2" role="status" aria-hidden="true"></span>
-                        <span class="spinner-grow spinner-grow-sm me-2" role="status" aria-hidden="true"></span>
-                        <span class="spinner-grow spinner-grow-sm" role="status" aria-hidden="true"></span>
-                        AI 正在思考...
-                    </div>
-                </div>
-                
             </div>
             
             <div class="chat-input-area mt-auto">
@@ -249,9 +266,8 @@
         // UI & RENDERING FUNCTIONS
         // =======================================================
 
-        // 核心渲染函数：支持 Markdown、表格、代码高亮和复制
         function renderMarkdown(element, markdownText) {
-            // 1. 基本 Markdown 转换（简单实现，不引入重型库）
+            // ... (Markdown 渲染代码与之前保持一致，保证功能不变)
             let html = markdownText
                 .replace(/^### (.*$)/gim, '<h3>$1</h3>')
                 .replace(/^## (.*$)/gim, '<h2>$1</h2>')
@@ -259,54 +275,44 @@
                 .replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>')
                 .replace(/\*(.*?)\*/gim, '<em>$1</em>')
                 .replace(/^- (.*$)/gim, '<li>$1</li>')
-                .replace(/\n\n/g, '<br><br>') // 保持段落间距
-                .replace(/\n/g, '<br>');      // 简单换行
+                .replace(/\n\n/g, '<br><br>')
+                .replace(/\n/g, '<br>');      
             
-            // 2. 临时占位符替换代码块，防止 Markdown 影响代码内容
             const codeBlocks = [];
             html = html.replace(/```(\w+)?\s*([\s\S]*?)```/g, (match, lang, code) => {
                 const language = lang ? lang.trim() : 'plaintext';
-                // 存储代码块的原始数据和语言
                 codeBlocks.push({ language, code: code.trim() }); 
                 return `[CODE_BLOCK_${codeBlocks.length - 1}]`;
             });
             
-            // 3. 再次进行列表和段落处理
             html = html.replace(/<li>/g, '<ul><li>').replace(/<\/li>/g, '</li></ul>');
             
             element.innerHTML = html;
 
-            // 4. 恢复代码块并应用高亮
             codeBlocks.forEach((block, index) => {
                 const placeholder = `[CODE_BLOCK_${index}]`;
                 const tempDiv = document.createElement('div');
-                tempDiv.innerText = block.code; // 使用 innerText 获取原始内容
+                tempDiv.innerText = block.code;
                 
-                // 创建 pre 元素
                 const pre = document.createElement('pre');
                 
-                // 创建 header
                 const header = document.createElement('div');
                 header.className = 'code-header';
                 header.innerHTML = `<span>${block.language.toUpperCase()}</span><button class="copy-btn" data-code-id="${index}">复制</button>`;
                 
-                // 创建 code 元素并应用高亮
                 const codeElement = document.createElement('code');
                 codeElement.className = `language-${block.language}`;
                 codeElement.textContent = block.code;
                 
-                // 运行 highlight.js
                 hljs.highlightElement(codeElement);
                 
                 pre.appendChild(header);
                 pre.appendChild(codeElement);
                 
-                // 将代码块插入到 HTML 中
                 const currentHtml = element.innerHTML;
                 element.innerHTML = currentHtml.replace(placeholder, pre.outerHTML);
             });
 
-            // 5. 绑定复制事件（需要延迟执行，因为代码块是动态插入的）
             setTimeout(() => {
                 document.querySelectorAll('.copy-btn').forEach(button => {
                     button.onclick = async () => {
@@ -353,19 +359,17 @@
                 typingInterval = null;
             }
             if (currentMessageElement) {
-                // 移除打字光标
                 currentMessageElement.classList.remove('typing'); 
             }
         }
         
         async function handleApiChat(message) {
-            // 状态控制
             stopAllTyping();
             isSending = true;
             sendButton.disabled = true;
             messageInput.disabled = true;
             
-            // 📌 修正点 1: 在发送请求前显示加载动画
+            // 显示加载动画
             typingIndicator.style.display = 'flex'; 
             scrollHistoryToBottom();
 
@@ -379,13 +383,11 @@
                 
                 // 2. 创建 AI 消息元素并设置为当前打字目标
                 currentMessageElement = createMessageElement('ai');
-                currentMessageElement.classList.add('typing'); // 添加打字光标
+                currentMessageElement.classList.add('typing');
                 scrollHistoryToBottom();
 
-                // 3. 构建请求体 (历史记录在 Worker 中处理)
                 const contents = [{ role: "user", parts: [{ text: message }] }];
 
-                // 4. 发送请求
                 const response = await fetch('/api/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -393,7 +395,7 @@
                     signal: currentAbortController.signal
                 });
 
-                // 📌 修正点 2: 收到响应后立即隐藏加载指示器
+                // 收到响应后隐藏加载指示器
                 typingIndicator.style.display = 'none';
 
                 if (!response.ok) {
@@ -408,7 +410,6 @@
                 let i = 0;
                 typingInterval = setInterval(() => {
                     if (i < aiText.length) {
-                        // 使用 substring 代替直接累加，性能更好
                         currentMessageElement.textContent = aiText.substring(0, i + 1); 
                         i++;
                         scrollHistoryToBottom();
@@ -418,15 +419,13 @@
                         renderMarkdown(currentMessageElement, aiText);
                         scrollHistoryToBottom();
                     }
-                }, 25); // 调整打字速度
+                }, 25); 
 
             } catch (error) {
                 if (error.name !== 'AbortError') {
-                    // 📌 修正点 3: 确保错误发生时隐藏
                     typingIndicator.style.display = 'none'; 
                     stopAllTyping();
                     const errorMessage = error.message.includes('AI 接口错误') ? error.message : `网络/系统错误: ${error.message}`;
-                    // 在 AI 消息区域显示错误
                     currentMessageElement.textContent = errorMessage; 
                     currentMessageElement.style.color = 'red';
                     console.error('Chat Error:', error);
@@ -438,7 +437,6 @@
                         isSending = false;
                         sendButton.disabled = false;
                         messageInput.disabled = false;
-                        // 📌 修正点 4: 确保打字完成后最终隐藏
                         typingIndicator.style.display = 'none'; 
                         clearInterval(checkTyping);
                     }
@@ -464,9 +462,25 @@
             }
         });
 
-        // Shift+Enter 换行，Enter 发送
+        // 📌 修复 2: 输入法兼容性 (compositionstart/end)
+        let isComposing = false;
+        
+        messageInput.addEventListener('compositionstart', () => {
+            isComposing = true;
+        });
+
+        messageInput.addEventListener('compositionend', () => {
+            isComposing = false;
+        });
+
+        // Shift+Enter 换行，Enter 发送 (只有在非输入法状态下才发送)
         messageInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
+                if (isComposing) {
+                    // 如果正在使用输入法，阻止默认的提交行为，让输入法处理回车
+                    return; 
+                }
+                
                 e.preventDefault(); 
                 chatForm.dispatchEvent(new Event('submit'));
             }
@@ -487,7 +501,7 @@
             } catch (error) {
                 console.warn('Failed to fetch config:', error);
             }
-            // 📌 修正点 5: 在初始化结束时强制隐藏加载动画
+            // 确保在初始化结束时强制隐藏加载动画
             typingIndicator.style.display = 'none'; 
         }
 
