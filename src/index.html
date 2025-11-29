@@ -138,10 +138,10 @@
         .ai-message ul { padding-left: 20px; margin-top: 5px; margin-bottom: 5px; list-style: disc; }
         .ai-message strong { font-weight: 700; }
 
-        /* 🚀 V6.5 新增：Markdown 表格样式 */
+        /* 🚀 V6.6 修正：将 margin 调整为 0，让换行符处理逻辑来控制间距 */
         .ai-message table {
             border-collapse: collapse; /* 合并边框 */
-            margin: 15px 0;
+            margin: 0; /* 核心调整：移除默认 margin */
             max-width: 100%;
             overflow-x: auto; /* 确保表格溢出时可以滚动 */
             display: block; /* 允许在小屏幕上滚动 */
@@ -157,7 +157,7 @@
             font-weight: 600;
             color: var(--text-header);
         }
-        /* 🚀 V6.5 新增：表格样式结束 */
+        /* 表格样式结束 */
 
         /* 输入区域样式 */
         .input-area { display: flex; padding: 16px 24px; border-top: 1px solid var(--border-main); background-color: var(--bg-card); align-items: center; gap: 10px; flex-shrink: 0; }
@@ -219,7 +219,7 @@
             typingTimerIds = [];
         }
         
-        // --- 🚀 V6.5 核心改动：辅助函数：Markdown 渲染 (新增表格解析逻辑) ---
+        // --- 🚀 V6.6 核心改动：辅助函数：Markdown 渲染 (新增换行清理逻辑) ---
         function renderMarkdown(text) {
             let htmlText = text;
 
@@ -284,6 +284,7 @@
                     // 遇到空行，结束表格
                     outputLines.push('</tbody></table>');
                     inTable = false;
+                    outputLines.push(line); // 🚀 V6.6 修正：保留这个空行，让后续清理逻辑处理它
                     continue;
                 } else if (inTable) {
                     // 遇到非表格行，结束表格
@@ -314,7 +315,24 @@
             htmlText = htmlText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
             htmlText = htmlText.replace(/\*(.*?)\*/g, '<em>$1</em>');
             
-            // 4. 替换最后的换行符为 <br>
+            // 🚀 V6.6 新增步骤：清理和压缩换行符，解决表格/代码块上方空行过多问题
+            // 目标：将块级元素（如表格/代码块/列表）前后的多余换行符/空格删除
+            
+            // 1. 将连续三个或更多的 \n 压缩成两个 \n (确保段落间有且仅有一个空行)
+            htmlText = htmlText.replace(/\n{3,}/g, '\n\n'); 
+            
+            // 2. 删除块级元素（如表格/代码块/列表）前后的多余换行符/空格
+            // 清理代码块
+            htmlText = htmlText.replace(/\s*<pre>/g, '<pre>');
+            htmlText = htmlText.replace(/<\/pre>\s*/g, '</pre>');
+            // 清理表格
+            htmlText = htmlText.replace(/\s*<table>/g, '<table>');
+            htmlText = htmlText.replace(/<\/table>\s*/g, '</table>');
+            // 清理列表
+            htmlText = htmlText.replace(/\s*<ul>/g, '<ul>');
+            htmlText = htmlText.replace(/<\/ul>\s*/g, '</ul>');
+
+            // 4. 替换最后的换行符为 <br> (注意：代码块和表格内部的换行符在步骤1/2中已经被处理/保留)
             return htmlText.replace(/\n/g, '<br>');
         }
         // --- Markdown 渲染函数修改结束 ---
@@ -350,9 +368,6 @@
                     if (i < rawText.length) {
                         try {
                             const currentText = rawText.substring(0, i + 1);
-                            // 注意：这里调用 renderMarkdown 会对部分渲染的内容进行重复处理（如 H2, 列表），
-                            // 但由于表格解析是基于完整文本进行的，在打字机过程中，表格不会完全显示，
-                            // 实际的渲染会在字符级别进行，效果是可以接受的。
                             messageElement.innerHTML = renderMarkdown(currentText) + cursor;
                             
                             i++;
