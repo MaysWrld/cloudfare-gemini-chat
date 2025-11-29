@@ -6,12 +6,14 @@
     <meta name="color-scheme" content="light dark"> 
     <title id="pageTitle">AI 助手</title> <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2d000/svg' viewBox='0 0 100 100'><text y='-.1em' x='-.05em' font-size='90'>✨</text></svg>">
     <style>
-        /* ... (CSS 样式保持不变) ... */
+        /* =================================================== */
+        /* === 颜色变量定义：深浅模式切换的核心 (V5.1) === */
+        /* =================================================== */
         :root {
             /* Light Mode Variables */
             --bg-main: #f0f4f9;
             --bg-card: #ffffff;
-            --bg-input: #f8ff;
+            --bg-input: #f8f9fa;
             --text-main: #3c4043;
             --text-header: #202124;
             --border-main: #e8eaed;
@@ -47,11 +49,15 @@
             }
         }
         
+        /* =================================================== */
+        /* === 布局和基础样式：使用颜色变量 === */
+        /* =================================================== */
         html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; }
         body { font-family: 'Google Sans', 'Roboto', Arial, sans-serif; background-color: var(--bg-main); display: flex; justify-content: center; align-items: center; color: var(--text-main); }
         .chat-container { width: 100%; height: 100%; max-width: 960px; background-color: var(--bg-card); border-radius: 0; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2); display: flex; flex-direction: column; min-height: initial; overflow: hidden; }
         @media (min-width: 961px) { .chat-container { height: 90vh; border-radius: 28px; } }
         
+        /* 头部样式：使用 space-between 分隔左右元素 */
         .header { 
             padding: 16px 24px; 
             background-color: var(--bg-card); 
@@ -67,6 +73,7 @@
         .header-title { font-weight: 500; }
         .header-icon { font-size: 1em; } 
 
+        /* V6.2 精简新聊天图标按钮样式 (保留) */
         .input-area .new-chat-icon-button {
             background: none;
             color: var(--text-main);
@@ -87,6 +94,7 @@
             background-color: var(--color-ai);
             border-color: var(--color-focus-blue);
         }
+        /* 按钮样式结束 */
 
         .chat-box { 
             flex-grow: 1; 
@@ -95,7 +103,8 @@
             display: flex; 
             flex-direction: column; 
             gap: 16px; 
-            scroll-behavior: auto; /* 必须是 auto 才能立即强制滚动 */
+            /* 恢复 scroll-behavior: smooth */
+            scroll-behavior: smooth; 
             -webkit-overflow-scrolling: touch; 
         }
         
@@ -120,7 +129,7 @@
         }
         .ai-thinking { border: 1px solid var(--color-brand-blue); box-sizing: border-box; animation: breathe-border 1.5s infinite ease-in-out; padding: 11px 17px; }
 
-        /* === 🚀 V6.6 新增：回弹动画效果 === */
+        /* === 🚀 V7.4/V7.3 新增：回弹动画效果 === */
         @keyframes bounce-message {
             0% { transform: scale(1); box-shadow: none; }
             20% { transform: scale(1.01); }
@@ -138,6 +147,8 @@
         .ai-message h2 { font-size: 1.2em; font-weight: 600; margin-top: 15px; margin-bottom: 5px; color: var(--color-brand-blue); }
         .ai-message ul { padding-left: 20px; margin-top: 5px; margin-bottom: 5px; list-style: disc; }
         .ai-message strong { font-weight: 700; }
+
+        /* 🚀 V6.5 新增：Markdown 表格样式 (保持不变) */
         .ai-message table {
             border-collapse: collapse; 
             margin: 15px 0;
@@ -157,7 +168,7 @@
             color: var(--text-header);
         }
 
-        /* 输入区域样式 */
+        /* 输入区域样式 (保持不变) */
         .input-area { display: flex; padding: 16px 24px; border-top: 1px solid var(--border-main); background-color: var(--bg-card); align-items: center; gap: 10px; flex-shrink: 0; }
         
         #messageInput { flex-grow: 1; padding: 12px 18px; border: 1px solid var(--border-main); border-radius: 24px; font-size: 1em; outline: none; transition: border-color 0.2s, box-shadow 0.2s; background-color: var(--bg-input); color: var(--text-main); }
@@ -166,7 +177,7 @@
         #sendButton:hover { background-color: #1565c0; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); }
         #sendButton:disabled { background-color: #dadce0; cursor: not-allowed; }
         
-        /* V5.12 动态哨兵 CSS */
+        /* V5.12 动态哨兵 CSS (保持不变) */
         #scrollSentinel {
             min-height: 1px;
             flex-shrink: 0;
@@ -197,24 +208,19 @@
         const newChatButton = document.getElementById('newChatIcon'); 
         const scrollSentinel = document.getElementById('scrollSentinel');
         
-        const pageTitleElement = document.getElementById('pageTitle');
+        const pageTitleElement = document.getElementById('pageTitle'); 
         const appTitleDisplayElement = document.getElementById('appTitleDisplay'); 
         
         // --- 【全局状态】 ---
         let currentAbortController = null; 
         let typingTimerIds = []; 
-        let lastScrollTop = 0; // V6.9: 用于判断滚动方向
-        let scrollLockEnabled = false; // V6.9: 控制是否启用锁定
-        let isForcingScroll = false; // V6.9: 标记是否正在进行强制滚动
         // ------------------------------------
 
-        // --- V5.12 新增函数：动态更新哨兵高度 (V7.2 优化: 等于 chatBox 高度) ---
+        // --- V5.12 新增函数：动态更新哨兵高度 (恢复到原始逻辑) ---
         function updateSentinelHeight() {
-            // 获取 chatBox 的可视高度
+            // 恢复 V5.12 原始逻辑，确保有 10px 的额外空间
             const chatBoxHeight = chatBox.clientHeight;
-            
-            // ⭐ V7.2 优化: 将哨兵高度设置为 chatBox 的高度，确保有足够的空间将消息推到顶部。
-            scrollSentinel.style.height = chatBoxHeight + 'px';
+            scrollSentinel.style.height = (chatBoxHeight + 10) + 'px';
         }
 
         // --- 中断动画函数 (保持不变) ---
@@ -226,65 +232,104 @@
         // --- 🚀 V6.5 核心改动：辅助函数：Markdown 渲染 (保持不变) ---
         function renderMarkdown(text) {
             let htmlText = text;
+
+            // 1. 处理代码块 (必须在所有其他行级解析之前完成)
             htmlText = htmlText.replace(/```(\w*)\n([\s\S]*?)```/g, function(match, lang, code) {
                 const escapedCode = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
                 const language = lang ? `<span class="code-lang" style="font-size: 0.8em; color: var(--color-code-lang); display: block; margin-bottom: 5px;">${lang}</span>` : '';
                 return `<pre><code>${language}${escapedCode}</code></pre>`;
             });
+
+            // 2. 表格解析 (基于行分割的多行处理)
             const lines = htmlText.split('\n');
             let outputLines = [];
             let inTable = false;
             let headerCells = 0; 
+
             for (let i = 0; i < lines.length; i++) {
                 const line = lines[i].trim();
+                
+                // 检查是否是表格分隔线（例如：|---|:---|---:）
                 const isSeparator = line.match(/^\|[ \t]*([: \-]*?\|)+[ \t]*$/);
+
                 if (!inTable && line.match(/^\|.*?\|$/) && i + 1 < lines.length && lines[i+1].trim().match(/^\|[ \t]*([: \-]*?\|)+[ \t]*$/)) {
+                    // 发现表格头和分隔符：| Header | Header | \n |---|---|
                     const headerLine = lines[i];
+                    
+                    // 开启表格结构
                     outputLines.push('<table><thead><tr>');
+                    
+                    // 解析 Header 行，注意：split('|') 会在首尾产生空字符串，故使用 slice(1, -1)
                     const headers = headerLine.split('|').slice(1, -1);
                     headerCells = headers.length;
-                    headers.forEach(header => { outputLines.push(`<th>${header.trim()}</th>`); });
+                    
+                    // 渲染表头
+                    headers.forEach(header => {
+                        outputLines.push(`<th>${header.trim()}</th>`);
+                    });
+
                     outputLines.push('</tr></thead><tbody>');
                     inTable = true;
-                    i++; 
+                    i++; // 跳过分隔行
                     continue;
                 } else if (inTable && line.match(/^\|.*?\|$/)) {
+                    // 表格内容行
                     const cells = line.split('|').slice(1, -1);
+                    
+                    // 简单的列数校验
                     if (cells.length === headerCells) {
                         outputLines.push('<tr>');
-                        cells.forEach(cell => { outputLines.push(`<td>${cell.trim()}</td>`); });
+                        cells.forEach(cell => {
+                            outputLines.push(`<td>${cell.trim()}</td>`);
+                        });
                         outputLines.push('</tr>');
                     } else {
+                        // 列数不匹配，结束表格并处理为普通行
                         outputLines.push('</tbody></table>');
                         inTable = false;
                         outputLines.push(line);
                     }
                     continue;
                 } else if (inTable && line === '') {
+                    // 遇到空行，结束表格
                     outputLines.push('</tbody></table>');
                     inTable = false;
                     continue;
                 } else if (inTable) {
+                    // 遇到非表格行，结束表格
                     outputLines.push('</tbody></table>');
                     inTable = false;
                     outputLines.push(line);
                 } else {
+                    // 普通行
                     outputLines.push(line);
                 }
             }
-            if (inTable) { outputLines.push('</tbody></table>'); }
+            
+            // 确保表格在文件末尾被关闭
+            if (inTable) {
+                outputLines.push('</tbody></table>');
+            }
+
+            // 将处理后的行重新合并为 htmlText
             htmlText = outputLines.join('\n');
+
+
+            // 3. 处理标题、列表和强调（在表格和代码块之后处理）
             htmlText = htmlText.replace(/^## (.*$)/gim, '<h2>$1</h2>');
             htmlText = htmlText.replace(/^\* (.*$)/gim, '<ul><li>$1</li></ul>');
             htmlText = htmlText.replace(/<\/li>\n<ul>/gim, '</li>'); 
             htmlText = htmlText.replace(/<\/ul>(\n<ul>)?/gim, '</ul>');
+            
             htmlText = htmlText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
             htmlText = htmlText.replace(/\*(.*?)\*/g, '<em>$1</em>');
+            
+            // 4. 替换最后的换行符为 <br>
             return htmlText.replace(/\n/g, '<br>');
         }
         // --- Markdown 渲染函数修改结束 ---
 
-        // --- 核心功能函数：appendMessage (V6.9: 新增锁定控制) ---
+        // --- 核心功能函数：appendMessage (恢复到原始逻辑) ---
         function appendMessage(sender, text) {
             const messageDiv = document.createElement('div');
             messageDiv.classList.add('message');
@@ -299,9 +344,7 @@
             
             chatBox.insertBefore(messageDiv, scrollSentinel);
             
-            // 如果是 AI 或系统消息，启用滚动锁定
             if (sender !== 'user') {
-                scrollLockEnabled = true;
                 chatBox.scrollTop = chatBox.scrollHeight; 
             }
             return messageDiv;
@@ -413,7 +456,30 @@
             }
         }
 
-        // --- handleApiChat (V6.9: 标记为回弹目标) ---
+        // --- 🚀 V7.4 核心改动：动画函数 (回复完成后调用) ---
+        function triggerMessageBounce(messageElement) {
+            // 确保只在 ai-message 消息上触发
+            if (!messageElement.classList.contains('ai-message')) {
+                return;
+            }
+            
+            // 移除旧的动画，以便可以再次触发
+            messageElement.classList.remove('bounced');
+            
+            // 强制回流/重绘，确保动画可以重新开始
+            void messageElement.offsetWidth; 
+
+            messageElement.classList.add('bounced');
+            
+            // 动画结束后移除类，清理 DOM
+            messageElement.addEventListener('animationend', function handler() {
+                messageElement.classList.remove('bounced');
+                messageElement.removeEventListener('animationend', handler);
+            }, { once: true });
+        }
+
+
+        // --- handleApiChat (V7.4: 移除 Observer 逻辑，改为直接调用动画) ---
         async function handleApiChat(aiMessageDiv, userMessage, signal) {
             
             setTimeout(() => { aiMessageDiv.textContent = '思考中。。。'; }, 100);
@@ -440,8 +506,9 @@
                     
                     await startTyping(aiMessageDiv, aiText); 
                     aiMessageDiv.classList.remove('ai-thinking');
-                    // V6.9: 完成打字后标记为目标 (用于回弹)
-                    aiMessageDiv.classList.add('new-ai-target'); 
+                    
+                    // 🚀 V7.4 核心：打字完成后立即触发动画
+                    triggerMessageBounce(aiMessageDiv);
                     
                 } else {
                     const errorMessage = data.error ? `AI 接口错误：${data.error.message || data.error}` : `请求失败，状态码：${response.status}`;
@@ -462,15 +529,10 @@
                 currentAbortController = null; 
                 sendButton.disabled = false;
                 messageInput.placeholder = '向 AI 提问...';
-                
-                // V6.9: 只有在未中断且成功标记时才开始观察 (用于回弹)
-                if (!signal.aborted && aiMessageDiv.classList.contains('new-ai-target')) {
-                    observeNewAIMessage();
-                }
             }
         }
 
-        // --- 核心功能函数：sendMessage (V7.1: 用户消息置顶滚动) ---
+        // --- 核心功能函数：sendMessage (恢复到原始逻辑) ---
         async function sendMessage() {
             const message = messageInput.value.trim();
             if (message === '') return;
@@ -484,142 +546,28 @@
                 appendMessage('system', '🔴 旧操作已中断。'); 
             }
 
-            // 用户开始操作，解除滚动锁定，允许用户查看历史记录
-            scrollLockEnabled = false; 
-
             const finalMessage = message; 
 
-            // 1. 插入用户消息
             const userMessageDiv = appendMessage('user', message); 
             messageInput.value = '';
             sendButton.disabled = true;
             messageInput.placeholder = 'AI 正在思考...';
             
             updateSentinelHeight();
-            
-            // ⭐ 核心功能：将用户消息滚动到列表顶部 (block: 'start') ⭐
-            setTimeout(() => {
-                userMessageDiv.scrollIntoView({ 
-                    block: 'start', // 滚动到视口开始位置 (即标题栏下方)
-                    behavior: 'smooth' 
-                }); 
-            }, 0); 
+            userMessageDiv.scrollIntoView({ block: 'start', behavior: 'smooth' });
             
             currentAbortController = new AbortController();
 
-            // 2. 插入 AI 思考中消息
             setTimeout(() => {
                 const aiMessageDiv = document.createElement('div');
                 aiMessageDiv.classList.add('message', 'ai-message', 'ai-thinking'); 
                 chatBox.insertBefore(aiMessageDiv, scrollSentinel); 
                 
-                // 插入 AI 消息后，再次滚动到 AI 消息的底部 (确保最新的内容在屏幕上，与用户消息置顶不冲突)
-                aiMessageDiv.scrollIntoView({ block: 'end', behavior: 'smooth' });
-
                 handleApiChat(aiMessageDiv, finalMessage, currentAbortController.signal);
             }, 50);
         }
 
-        // ===================================================
-        // === V6.9 核心改动：向下滚动锁定在最新消息的位置 (保持不变) ===
-        // ===================================================
-        function checkAndLockScroll() {
-            const currentScrollTop = chatBox.scrollTop;
-
-            // 1. 判断是否正在向下滚动
-            const isScrollingDown = currentScrollTop > lastScrollTop;
-            
-            // 2. 如果滚动锁定被启用，并且用户正在向下滚动
-            if (scrollLockEnabled && isScrollingDown) {
-                
-                // 3. 获取最新消息（最后一个非哨兵元素）
-                const messages = chatBox.querySelectorAll('.message');
-                const latestAiMessage = messages[messages.length - 1]; // 哨兵前最后一个消息
-                
-                if (latestAiMessage && latestAiMessage !== scrollSentinel) {
-                    
-                    // 计算最新消息应该被锚定的位置 (消息底部的滚动位置)
-                    const messageBottomScrollTop = latestAiMessage.offsetTop + latestAiMessage.offsetHeight - chatBox.clientHeight;
-                    
-                    // 只有当当前滚动位置超过了这个锚定点时，才进行矫正
-                    if (currentScrollTop > messageBottomScrollTop) {
-                        
-                        // 强制将滚动条设置到锚定点，阻止其继续向下滚动到哨兵位置
-                        isForcingScroll = true;
-                        chatBox.scrollTop = messageBottomScrollTop;
-                        console.log("⚠️ 向下滚动锁定在最新消息底部触发！");
-                        
-                        // 短暂延迟后重置标记
-                        setTimeout(() => {
-                            isForcingScroll = false;
-                        }, 50); 
-                    }
-                }
-            }
-            
-            // 4. 用户向上滚动时，解除锁定
-            if (currentScrollTop < lastScrollTop) {
-                scrollLockEnabled = false;
-            }
-
-            lastScrollTop = currentScrollTop <= 0 ? 0 : currentScrollTop;
-        }
-
-        // 将锁定逻辑绑定到滚动事件上
-        chatBox.addEventListener('scroll', () => {
-             // 只有在没有进行强制滚动操作时，才执行锁定检查
-             if (!isForcingScroll) {
-                 checkAndLockScroll();
-             }
-        });
-
-
-        // ===================================================
-        // === V6.6 回弹动画逻辑 (保持不变) ===
-        // ===================================================
-        let observer = null;
-
-        function initializeObserver() {
-            if (!('IntersectionObserver' in window)) {
-                return;
-            }
-
-            const options = {
-                root: chatBox, 
-                rootMargin: '0px',
-                threshold: 0.8 
-            };
-
-            observer = new IntersectionObserver((entries, observer) => {
-                entries.forEach(entry => {
-                    // --- 1. 回弹动画逻辑 ---
-                    const target = entry.target;
-                    if (target.classList.contains('new-ai-target') && entry.isIntersecting && entry.intersectionRatio >= 0.8) {
-                        target.classList.remove('new-ai-target');
-                        observer.unobserve(target); // 触发一次后移除观察
-                        
-                        target.classList.add('bounced');
-                        target.addEventListener('animationend', () => {
-                            target.classList.remove('bounced');
-                        }, { once: true });
-                    }
-                });
-            }, options);
-        }
-
-        function observeNewAIMessage() {
-            const newTargets = chatBox.querySelectorAll('.new-ai-target');
-            newTargets.forEach(target => {
-                if (observer && !target.dataset.observed) {
-                    observer.observe(target);
-                    target.dataset.observed = 'true'; 
-                }
-            });
-        }
-        // ===================================================
-
-
-        // --- 事件监听器 (整合初始化) ---
+        // --- 事件监听器 (恢复到原始逻辑) ---
         sendButton.addEventListener('click', sendMessage);
         
         messageInput.addEventListener('keydown', function(event) {
@@ -631,10 +579,7 @@
 
         newChatButton.addEventListener('click', startNewChat);
 
-        document.addEventListener('DOMContentLoaded', () => {
-            fetchConfig(); // 原始的初始化调用
-            initializeObserver(); // 初始化回弹观察者
-        });
+        document.addEventListener('DOMContentLoaded', fetchConfig);
         window.addEventListener('resize', updateSentinelHeight);
     </script>
 </body>
