@@ -7,12 +7,12 @@
     <title id="pageTitle">AI 助手</title> <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2d000/svg' viewBox='0 0 100 100'><text y='-.1em' x='-.05em' font-size='90'>✨</text></svg>">
     <style>
         /* =================================================== */
-        /* === 颜色变量定义：深浅模式切换的核心 (V8.1) === */
+        /* === 颜色变量定义：深浅模式切换的核心 (V8.3) === */
         /* =================================================== */
         :root {
             /* Light Mode Variables */
             --bg-main: #f0f4f9;
-            --bg-card: rgba(255, 255, 255, 0.9); /* 🚀 V8.1：半透明白色 */
+            --bg-card: rgba(255, 255, 255, 0.7); /* 🚀 V8.3 核心修改：更高透明度 (0.7) */
             --bg-input: #f8f9fa;
             --text-main: #3c4043;
             --text-header: #202124;
@@ -26,16 +26,15 @@
             --color-focus-blue: #8ab4f8;
             --color-brand-blue: #1a73e8;
             --color-brand-blue-rgb: 26, 115, 232;
-            /* 🚀 V8.0 新增：Canvas 粒子颜色变量 */
             --color-particle: #4285f4; /* 粒子颜色 */
-            --color-particle-line: #a0c3ff; /* 连线颜色 */
+            --color-particle-line: #0088ff; /* 🚀 V8.2：更明显的线条颜色 */
         }
 
         /* 深色模式：根据设备设置覆盖颜色变量 */
         @media (prefers-color-scheme: dark) {
             :root {
                 --bg-main: #121212;
-                --bg-card: rgba(32, 32, 32, 0.9); /* 🚀 V8.1：半透明深灰色 */
+                --bg-card: rgba(32, 32, 32, 0.7); /* 🚀 V8.3 核心修改：更高透明度 (0.7) */
                 --bg-input: #303030;
                 --text-main: #e0e0e0;
                 --text-header: #f5f5f5;
@@ -49,9 +48,8 @@
                 --color-focus-blue: #5b92e5;
                 --color-brand-blue: #5b92e5;
                 --color-brand-blue-rgb: 91, 146, 229; 
-                /* 🚀 V8.0 新增：Canvas 粒子颜色变量 */
                 --color-particle: #8ab4f8; /* 深色模式粒子颜色 */
-                --color-particle-line: #5b92e5; /* 深色模式连线颜色 */
+                --color-particle-line: #b0d0ff; /* 🚀 V8.2：更明显的线条颜色 */
             }
         }
         
@@ -63,12 +61,12 @@
         
         /* 🚀 V8.0 新增：Canvas 背景样式 */
         #v8Canvas {
-            position: fixed; /* 固定在背景 */
+            position: fixed; 
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            z-index: -1; /* 确保在内容下方 */
+            z-index: -1; 
         }
 
         /* 聊天容器：使用半透明背景并确保在 Canvas 上方 */
@@ -76,7 +74,7 @@
             width: 100%; 
             height: 100%; 
             max-width: 960px; 
-            background-color: var(--bg-card); /* 🚀 V8.1：使用半透明变量 */
+            background-color: var(--bg-card); /* 🚀 V8.3：更高透明度 */
             border-radius: 0; 
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2); 
             display: flex; 
@@ -84,7 +82,7 @@
             min-height: initial; 
             overflow: hidden; 
             position: relative; 
-            z-index: 1; /* 确保内容在 Canvas 上方 */
+            z-index: 1; 
         }
 
         @media (min-width: 961px) { .chat-container { height: 90vh; border-radius: 28px; } }
@@ -92,7 +90,7 @@
         /* 头部样式：使用半透明背景 */
         .header { 
             padding: 16px 24px; 
-            background-color: var(--bg-card); /* 🚀 V8.1：使用半透明变量 */
+            background-color: var(--bg-card); /* 🚀 V8.3：更高透明度 */
             border-bottom: 1px solid var(--border-main); 
             color: var(--text-header); 
             font-size: 1.5em; 
@@ -130,16 +128,16 @@
         
         .header-icon { font-size: 1em; } 
         
-        /* 🚀 V7.8 修改：标题栏欢迎语样式 (保持不变) */
+        /* 🚀 欢迎语样式：用于调节字体大小 */
         .welcome-overlay {
             position: absolute;
             left: 50%;
             top: 50%;
             transform: translate(-50%, -50%);
-            font-size: 0.5em; 
+            font-size: 0.8em; /* 在这里调整字体大小 */
             font-weight: 400;
             color: #888888;
-            background-color: var(--bg-card); /* 🚀 V8.1：使用半透明变量 */
+            background-color: var(--bg-card); /* 🚀 V8.3：更高透明度 */
             opacity: 0.7; 
             padding: 4px 12px;
             border-radius: 16px;
@@ -253,7 +251,7 @@
         }
 
         /* 输入区域样式：使用半透明背景 */
-        .input-area { display: flex; padding: 16px 24px; border-top: 1px solid var(--border-main); background-color: var(--bg-card); /* 🚀 V8.1：使用半透明变量 */ align-items: center; gap: 10px; flex-shrink: 0; }
+        .input-area { display: flex; padding: 16px 24px; border-top: 1px solid var(--border-main); background-color: var(--bg-card); /* 🚀 V8.3：更高透明度 */ align-items: center; gap: 10px; flex-shrink: 0; }
         
         #messageInput { flex-grow: 1; padding: 12px 18px; border: 1px solid var(--border-main); border-radius: 24px; font-size: 1em; outline: none; transition: border-color 0.2s, box-shadow 0.2s; background-color: var(--bg-input); color: var(--text-main); }
         #messageInput:focus { border-color: var(--color-focus-blue); box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.2); background-color: var(--bg-card); }
@@ -383,7 +381,7 @@
                             // 距离越远，透明度越低
                             const opacity = 1 - (distance / maxDistance);
                             ctx.strokeStyle = lineColor;
-                            ctx.globalAlpha = opacity * 0.5;
+                            ctx.globalAlpha = opacity * 0.8; // 🚀 V8.2 提高连线不透明度
                             ctx.lineWidth = 1;
                             ctx.beginPath();
                             ctx.moveTo(p1.x, p1.y);
@@ -398,7 +396,6 @@
             // 主循环
             function animate() {
                 // 清空画布
-                // 使用带透明度的背景填充可以实现尾迹效果，但这里使用 clearRect 以保持清晰
                 ctx.clearRect(0, 0, width, height); 
 
                 // 绘制连线
