@@ -26,6 +26,8 @@
             --color-focus-blue: #8ab4f8;
             --color-brand-blue: #1a73e8;
             --color-brand-blue-rgb: 26, 115, 232;  
+            --color-body-breathe-start: rgba(var(--color-brand-blue-rgb), 0.08); /* 🚀 V7.9 新增 */
+            --color-body-breathe-end: rgba(var(--color-brand-blue-rgb), 0.2); /* 🚀 V7.9 新增 */
         }
 
         /* 深色模式：根据设备设置覆盖颜色变量 */
@@ -46,6 +48,8 @@
                 --color-focus-blue: #5b92e5;
                 --color-brand-blue: #5b92e5;
                 --color-brand-blue-rgb: 91, 146, 229; 
+                --color-body-breathe-start: rgba(var(--color-brand-blue-rgb), 0.05); /* 🚀 V7.9 新增 */
+                --color-body-breathe-end: rgba(var(--color-brand-blue-rgb), 0.15); /* 🚀 V7.9 新增 */
             }
         }
         
@@ -53,7 +57,33 @@
         /* === 布局和基础样式：使用颜色变量 === */
         /* =================================================== */
         html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; }
-        body { font-family: 'Google Sans', 'Roboto', Arial, sans-serif; background-color: var(--bg-main); display: flex; justify-content: center; align-items: center; color: var(--text-main); }
+        
+        /* 🚀 V7.9 页面呼吸效果 */
+        body { 
+            font-family: 'Google Sans', 'Roboto', Arial, sans-serif; 
+            background-color: var(--bg-main); 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            color: var(--text-main); 
+            /* 呼吸效果 */
+            box-shadow: 0 0 0 0px var(--color-body-breathe-start);
+            animation: body-breathe 8s infinite ease-in-out alternate;
+        }
+
+        /* 🚀 V7.9 新增：整个页面（body）的呼吸动画 */
+        @keyframes body-breathe {
+            0% { 
+                box-shadow: 0 0 0 0px var(--color-body-breathe-start); 
+            }
+            50% { 
+                box-shadow: 0 0 25px 5px var(--color-body-breathe-end); 
+            }
+            100% { 
+                box-shadow: 0 0 0 0px var(--color-body-breathe-start); 
+            }
+        }
+
         .chat-container { width: 100%; height: 100%; max-width: 960px; background-color: var(--bg-card); border-radius: 0; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2); display: flex; flex-direction: column; min-height: initial; overflow: hidden; }
         @media (min-width: 961px) { .chat-container { height: 90vh; border-radius: 28px; } }
         
@@ -72,33 +102,44 @@
             position: relative; /* 相对定位 */
         }
         
-        /* 🚀 V7.8 标题呼吸动画 */
-        /* 标题文字样式 */
+        /* 🚀 V7.9 应用标题样式 - 移除文本呼吸动画，为“三个点”做准备 */
         .header-title { 
             font-weight: 500; 
-            /* 标题呼吸效果 */
-            animation: breathe-text 2s infinite alternate ease-in-out; 
-            transition: color 0.2s; /* 确保颜色切换平滑 */
+            display: flex; /* 让文本和点在同一行 */
+            align-items: center;
         }
         
-        /* 🚀 V7.8 新增：标题文字呼吸动画 */
-        @keyframes breathe-text {
-            0% { 
-                opacity: 1;
-                /* 轻微光晕 */
-                text-shadow: 0 0 1px rgba(var(--color-brand-blue-rgb), 0.2); 
-            }
-            50% { 
-                opacity: 0.95; 
-                /* 增强光晕效果 */
-                text-shadow: 0 0 6px rgba(var(--color-brand-blue-rgb), 0.7); 
-            }
-            100% {
-                opacity: 1;
-                text-shadow: 0 0 1px rgba(var(--color-brand-blue-rgb), 0.2); 
-            }
+        /* 🚀 V7.9 新增：三个点动画 */
+        .dots-loader {
+            display: inline-block; /* 保持在标题行内 */
+            margin-left: 8px; /* 与标题文字的间隔 */
+            width: 20px; /* 预留动画空间 */
+            height: 1em; /* 与文字高度一致 */
+            line-height: 1; /* 确保点在垂直方向上居中 */
+            overflow: hidden; /* 隐藏超出范围的动画 */
+            vertical-align: middle; /* 垂直居中对齐标题文字 */
         }
-        
+
+        .dots-loader::after {
+            content: '...'; /* 初始三个点 */
+            display: inline-block;
+            animation: dot-dot-dot 1.5s infinite steps(4, end); /* steps(4, end) 可以让点逐个出现 */
+            color: var(--color-brand-blue); /* 点的颜色 */
+            font-size: 0.8em; /* 调整点的大小 */
+            vertical-align: middle;
+            margin-top: -0.2em; /* 微调垂直位置 */
+        }
+
+        @keyframes dot-dot-dot {
+            0% { content: ''; }
+            25% { content: '.'; }
+            50% { content: '..'; }
+            75% { content: '...'; }
+            100% { content: '...'; } /* 保持3个点一段时间 */
+        }
+        /* 标题三个点动画结束 */
+
+
         .header-icon { font-size: 1em; } 
         
         /* 🚀 V7.8 修改：标题栏欢迎语样式 */
@@ -181,7 +222,7 @@
         .ai-message { align-self: flex-start; background-color: var(--color-ai); }
         .system-message { align-self: center; background-color: var(--color-system-bg); color: var(--color-system-text); font-size: 0.85em; text-align: center; padding: 8px 12px; border-radius: 12px; max-width: 60%; }
 
-        /* --- 呼吸动画效果 --- */
+        /* --- 呼吸动画效果 (AI Thinking 保持不变) --- */
         @keyframes breathe-border {
             0%, 100% { box-shadow: 0 0 0 0px rgba(var(--color-brand-blue-rgb), 0.5); }
             50% { box-shadow: 0 0 0 3px rgba(var(--color-brand-blue-rgb), 0.8); }
@@ -248,7 +289,9 @@
 
     <div class="chat-container">
         <div class="header">
-            <span class="header-title" id="appTitleDisplay">AI 助手</span> 
+            <span class="header-title" id="appTitleDisplay">
+                AI 助手
+                <span class="dots-loader"></span> </span> 
             <div id="welcomeMessageOverlay" class="welcome-overlay" style="display: none;"></div> 
             <span class="header-icon">✨</span>
         </div>
@@ -269,9 +312,11 @@
         const newChatButton = document.getElementById('newChatIcon'); 
         const scrollSentinel = document.getElementById('scrollSentinel');
         const welcomeMessageOverlay = document.getElementById('welcomeMessageOverlay');
-        
-        const pageTitleElement = document.getElementById('pageTitle'); 
         const appTitleDisplayElement = document.getElementById('appTitleDisplay'); 
+        const pageTitleElement = document.getElementById('pageTitle'); 
+        
+        // 🚀 V7.9 新增：三个点动画元素
+        const dotsLoader = document.querySelector('.dots-loader');
         
         // --- 【全局状态】 ---
         let currentAbortController = null; 
@@ -428,7 +473,7 @@
             });
         }
         
-        // --- 🚀 V7.7：在标题栏显示欢迎语并定时消失 (逻辑保持不变) ---
+        // --- 在标题栏显示欢迎语并定时消失 (逻辑保持不变) ---
         function showWelcomeMessage(text) {
             if (!text) return;
 
@@ -436,15 +481,13 @@
             welcomeMessageOverlay.style.display = 'block';
             welcomeMessageOverlay.classList.remove('fading'); 
 
-            // 3000毫秒（3秒）后开始淡出
             setTimeout(() => {
                 welcomeMessageOverlay.classList.add('fading');
                 
-                // 动画结束后（0.5秒后）彻底隐藏
                 setTimeout(() => {
                     welcomeMessageOverlay.style.display = 'none';
                     welcomeMessageOverlay.classList.remove('fading');
-                }, 500); // 匹配 CSS 中的 animation duration 0.5s
+                }, 500); 
 
             }, 3000); 
         }
@@ -461,12 +504,16 @@
                     const defaultAppTitle = 'AI 助手';
                     const appTitle = config.appTitle || defaultAppTitle;
                     pageTitleElement.textContent = appTitle;
-                    appTitleDisplayElement.textContent = appTitle;
+                    // appTitleDisplayElement.textContent = appTitle; // 🚀 V7.9 移除，因为标题现在是span+dots
+                    
+                    // 🚀 V7.9 更新：只设置 appTitleDisplayElement 的文本内容，不包括 dotsLoader
+                    // dotsLoader 已经作为其子元素存在
+                    appTitleDisplayElement.firstChild.textContent = appTitle; 
+
 
                     const defaultWelcome = '喂。你要问什么？快点。';
                     const welcomeText = config.welcomeMessage || defaultWelcome;
                     
-                    // 调用新的函数在标题栏显示欢迎语
                     showWelcomeMessage(welcomeText); 
                     
                 } else {
@@ -520,11 +567,16 @@
         }
 
 
-        // --- handleApiChat (保持 V7.5 逻辑) ---
+        // --- handleApiChat (🚀 V7.9 核心修改：AI 回复时显示/隐藏三个点) ---
         async function handleApiChat(aiMessageDiv, userMessage, signal) {
             
-            setTimeout(() => { aiMessageDiv.textContent = '思考中。。。'; }, 100);
+            setTimeout(() => { 
+                aiMessageDiv.textContent = '思考中。。。'; 
+            }, 100);
             
+            // 🚀 V7.9 核心：AI 开始响应时，显示三个点动画
+            dotsLoader.style.display = 'inline-block'; 
+
             try {
                 const response = await fetch('/api/chat', {
                     method: 'POST',
@@ -572,6 +624,9 @@
                 
                 isSentinelActive = false; 
                 updateSentinelHeight();
+
+                // 🚀 V7.9 核心：AI 回复完成后，隐藏三个点动画
+                dotsLoader.style.display = 'none'; 
             }
         }
 
@@ -616,16 +671,4 @@
         sendButton.addEventListener('click', sendMessage);
         
         messageInput.addEventListener('keydown', function(event) {
-            if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
-                event.preventDefault(); 
-                sendMessage();
-            }
-        });
-
-        newChatButton.addEventListener('click', startNewChat);
-
-        document.addEventListener('DOMContentLoaded', fetchConfig);
-        window.addEventListener('resize', updateSentinelHeight); 
-    </script>
-</body>
-</html>
+            if (event.key
