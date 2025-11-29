@@ -335,8 +335,10 @@
                     this.x = Math.random() * width;
                     this.y = Math.random() * height;
                     this.radius = Math.random() * 1.5 + 0.5;
-                    this.vx = Math.random() * 0.5 - 0.25;
-                    this.vy = Math.random() * 0.5 - 0.25;
+                    
+                    // 🚀 V8.5 核心修改：提高速度范围到 -0.75 到 0.75
+                    this.vx = Math.random() * 1.5 - 0.75; 
+                    this.vy = Math.random() * 1.5 - 0.75;
                 }
 
                 // 更新位置
