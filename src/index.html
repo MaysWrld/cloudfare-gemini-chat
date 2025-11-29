@@ -247,4 +247,330 @@
                 const line = lines[i].trim();
                 
                 // 检查是否是表格分隔线（例如：|---|:---|---:）
-                const is
+                const isSeparator = line.match(/^\|[ \t]*([: \-]*?\|)+[ \t]*$/);
+
+                if (!inTable && line.match(/^\|.*?\|$/) && i + 1 < lines.length && lines[i+1].trim().match(/^\|[ \t]*([: \-]*?\|)+[ \t]*$/)) {
+                    // 发现表格头和分隔符：| Header | Header | \n |---|---|
+                    const headerLine = lines[i];
+                    
+                    // 开启表格结构
+                    outputLines.push('<table><thead><tr>');
+                    
+                    // 解析 Header 行，注意：split('|') 会在首尾产生空字符串，故使用 slice(1, -1)
+                    const headers = headerLine.split('|').slice(1, -1);
+                    headerCells = headers.length;
+                    
+                    // 渲染表头
+                    headers.forEach(header => {
+                        outputLines.push(`<th>${header.trim()}</th>`);
+                    });
+
+                    outputLines.push('</tr></thead><tbody>');
+                    inTable = true;
+                    i++; // 跳过分隔行
+                    continue;
+                } else if (inTable && line.match(/^\|.*?\|$/)) {
+                    // 表格内容行
+                    const cells = line.split('|').slice(1, -1);
+                    
+                    // 简单的列数校验，防止意外换行或数据错误导致表格错乱
+                    if (cells.length === headerCells) {
+                        outputLines.push('<tr>');
+                        cells.forEach(cell => {
+                            outputLines.push(`<td>${cell.trim()}</td>`);
+                        });
+                        outputLines.push('</tr>');
+                    } else {
+                        // 列数不匹配，结束表格并处理为普通行
+                        outputLines.push('</tbody></table>');
+                        inTable = false;
+                        outputLines.push(line);
+                    }
+                    continue;
+                } else if (inTable && line === '') {
+                    // 遇到空行，结束表格
+                    outputLines.push('</tbody></table>');
+                    inTable = false;
+                    continue;
+                } else if (inTable) {
+                    // 遇到非表格行，结束表格
+                    outputLines.push('</tbody></table>');
+                    inTable = false;
+                    outputLines.push(line);
+                } else {
+                    // 普通行
+                    outputLines.push(line);
+                }
+            }
+            
+            // 确保表格在文件末尾被关闭
+            if (inTable) {
+                outputLines.push('</tbody></table>');
+            }
+
+            // 将处理后的行重新合并为 htmlText
+            htmlText = outputLines.join('\n');
+
+
+            // 3. 处理标题、列表和强调（在表格和代码块之后处理）
+            
+            // 🚀 V6.7 Fix: 处理水平线 (Horizontal Rule: ---, ***, ___)，解决连续横线问题
+            // 必须在列表和强调处理之前
+            htmlText = htmlText.replace(/^[ \t]*([*_-]{3,})[ \t]*$/gim, '<hr>');
+
+            htmlText = htmlText.replace(/^## (.*$)/gim, '<h2>$1</h2>');
+            htmlText = htmlText.replace(/^\* (.*$)/gim, '<ul><li>$1</li></ul>');
+            htmlText = htmlText.replace(/<\/li>\n<ul>/gim, '</li>'); 
+            htmlText = htmlText.replace(/<\/ul>(\n<ul>)?/gim, '</ul>');
+            
+            htmlText = htmlText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            htmlText = htmlText.replace(/\*(.*?)\*/g, '<em>$1</em>');
+            
+            // 🚀 V6.6 Fix: 清理多余的换行符和空格，解决表格上方留白问题
+            // 1. 将连续三个或更多的 \n 压缩成两个 \n
+            htmlText = htmlText.replace(/\n{3,}/g, '\n\n'); 
+            // 2. 删除块级元素（如表格/代码块/列表）前后的多余换行符/空格
+            htmlText = htmlText.replace(/\s*<table>/g, '<table>');
+            htmlText = htmlText.replace(/<\/table>\s*/g, '</table>');
+            htmlText = htmlText.replace(/<\/pre>\s*/g, '</pre>');
+            htmlText = htmlText.replace(/<\/ul>\s*/g, '</ul>');
+
+            // 4. 替换最后的换行符为 <br>
+            return htmlText.replace(/\n/g, '<br>');
+        }
+        // --- Markdown 渲染函数修改结束 ---
+
+        // --- 核心功能函数：appendMessage (保持不变) ---
+        function appendMessage(sender, text) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message');
+            
+            if (sender === 'user') {
+                messageDiv.classList.add('user-message');
+                messageDiv.textContent = text; 
+            } else {
+                messageDiv.classList.add('system-message');
+                messageDiv.innerHTML = text;
+            }
+            
+            chatBox.insertBefore(messageDiv, scrollSentinel);
+            
+            if (sender !== 'user') {
+                chatBox.scrollTop = chatBox.scrollHeight; 
+            }
+            return messageDiv;
+        }
+        
+        // --- 打字机效果函数 (保持不变) ---
+        function startTyping(messageElement, rawText, delay = 1) { 
+            return new Promise(resolve => {
+                let i = 0;
+                const cursor = '<span style="opacity: 0.8; margin-left: 2px; color: var(--text-main);">▋</span>'; 
+                
+                function type() {
+                    if (i < rawText.length) {
+                        try {
+                            const currentText = rawText.substring(0, i + 1);
+                            messageElement.innerHTML = renderMarkdown(currentText) + cursor;
+                            
+                            i++;
+                            const timerId = setTimeout(type, delay);
+                            typingTimerIds.push(timerId); 
+                        } catch (e) {
+                            console.error("Typing rendering error:", e);
+                            messageElement.innerHTML = renderMarkdown(rawText);
+                            resolve(); 
+                        }
+                    } else {
+                        messageElement.innerHTML = renderMarkdown(rawText);
+                        resolve();
+                    }
+                }
+
+                type();
+            });
+        }
+        
+        // --- 欢迎语的异步处理 (保持不变) ---
+        function displayWelcomeMessage(welcomeMessageDiv, welcomeText) {
+            let i = 0;
+            const delay = 2; 
+            const cursor = '<span style="opacity: 0.8; margin-left: 2px; color: var(--text-main);">▋</span>'; 
+            
+            function typeWelcome() {
+                if (i < welcomeText.length) {
+                    try {
+                        welcomeMessageDiv.innerHTML = renderMarkdown(welcomeText.substring(0, i + 1)) + cursor;
+                        i++;
+                        const timerId = setTimeout(typeWelcome, delay);
+                        typingTimerIds.push(timerId); 
+                    } catch (e) {
+                        console.error("Welcome message typing error, falling back:", e);
+                        welcomeMessageDiv.innerHTML = renderMarkdown(welcomeText);
+                    }
+                } else {
+                    welcomeMessageDiv.innerHTML = renderMarkdown(welcomeText);
+                }
+            }
+            typeWelcome();
+        }
+
+        // --- fetchConfig (保持不变) ---
+        async function fetchConfig() {
+            updateSentinelHeight();
+            
+            try {
+                const response = await fetch('/api/admin'); 
+                
+                if (response.ok) {
+                    const config = await response.json();
+                    
+                    const defaultAppTitle = 'AI 助手';
+                    const appTitle = config.appTitle || defaultAppTitle;
+                    pageTitleElement.textContent = appTitle;
+                    appTitleDisplayElement.textContent = appTitle;
+
+                    const defaultWelcome = '喂。你要问什么？快点。';
+                    const welcomeText = config.welcomeMessage || defaultWelcome;
+                    
+                    const welcomeMessageDiv = document.createElement('div');
+                    welcomeMessageDiv.classList.add('message', 'ai-message');
+                    chatBox.insertBefore(welcomeMessageDiv, scrollSentinel); 
+                    
+                    displayWelcomeMessage(welcomeMessageDiv, welcomeText);
+                    
+                } else {
+                    appendMessage('ai', '呵，又来了？连个配置都连不上。');
+                }
+            } catch (error) {
+                appendMessage('system', '网络错误，懒得跟你解释。');
+            }
+        }
+        
+        // --- startNewChat (保持不变) ---
+        async function startNewChat() {
+            if (!confirm("确定要开启新的聊天吗？当前对话记录将被清空。")) {
+                return;
+            }
+
+            try {
+                stopAllTyping();
+                if (currentAbortController) {
+                    currentAbortController.abort();
+                }
+
+                const response = await fetch('/api/new_chat', { method: 'POST' });
+                
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    alert('清除历史失败，请检查网络或后端配置。');
+                }
+            } catch (error) {
+                alert('网络错误，无法连接到清除会话接口。');
+                console.error('New Chat Error:', error);
+            }
+        }
+
+        // --- handleApiChat (保持不变) ---
+        async function handleApiChat(aiMessageDiv, userMessage, signal) {
+            
+            setTimeout(() => { aiMessageDiv.textContent = '思考中。。。'; }, 100);
+            
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ role: "user", parts: [{ text: userMessage }] }] 
+                    }),
+                    signal: signal 
+                });
+
+                if (signal.aborted) {
+                    aiMessageDiv.remove(); 
+                    return; 
+                }
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || '抱歉，AI 返回了空响应。';
+                    
+                    await startTyping(aiMessageDiv, aiText); 
+                    aiMessageDiv.classList.remove('ai-thinking');
+                    
+                } else {
+                    const errorMessage = data.error ? `AI 接口错误：${data.error.message || data.error}` : `请求失败，状态码：${response.status}`;
+                    
+                    aiMessageDiv.classList.remove('ai-thinking');
+                    aiMessageDiv.classList.remove('ai-message'); 
+                    aiMessageDiv.classList.add('system-message');
+                    aiMessageDiv.innerHTML = errorMessage;
+                }
+
+            } catch (error) {
+                if (error.name !== 'AbortError') {
+                    aiMessageDiv.remove(); 
+                    appendMessage('system', '网络连接失败，网络连接失败？看来你连网线都不会插。');
+                    console.error('Chat error:', error);
+                }
+            } finally {
+                currentAbortController = null; 
+                sendButton.disabled = false;
+                messageInput.placeholder = '向 AI 提问...';
+            }
+        }
+
+        // --- 核心功能函数：sendMessage (保持不变) ---
+        async function sendMessage() {
+            const message = messageInput.value.trim();
+            if (message === '') return;
+
+            stopAllTyping(); 
+            if (currentAbortController) {
+                currentAbortController.abort(); 
+                currentAbortController = null;
+                const oldThinking = document.querySelector('.ai-thinking');
+                if (oldThinking) oldThinking.remove(); 
+                appendMessage('system', '🔴 旧操作已中断。'); 
+            }
+
+            const finalMessage = message; 
+
+            const userMessageDiv = appendMessage('user', message); 
+            messageInput.value = '';
+            sendButton.disabled = true;
+            messageInput.placeholder = 'AI 正在思考...';
+            
+            updateSentinelHeight();
+            userMessageDiv.scrollIntoView({ block: 'start', behavior: 'smooth' });
+            
+            currentAbortController = new AbortController();
+
+            setTimeout(() => {
+                const aiMessageDiv = document.createElement('div');
+                aiMessageDiv.classList.add('message', 'ai-message', 'ai-thinking'); 
+                chatBox.insertBefore(aiMessageDiv, scrollSentinel); 
+                
+                handleApiChat(aiMessageDiv, finalMessage, currentAbortController.signal);
+            }, 50);
+        }
+
+        // --- 事件监听器 (保持不变) ---
+        sendButton.addEventListener('click', sendMessage);
+        
+        messageInput.addEventListener('keydown', function(event) {
+            if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
+                event.preventDefault(); 
+                sendMessage();
+            }
+        });
+
+        newChatButton.addEventListener('click', startNewChat);
+
+        document.addEventListener('DOMContentLoaded', fetchConfig);
+        window.addEventListener('resize', updateSentinelHeight);
+    </script>
+</body>
+</html>
