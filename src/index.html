@@ -208,10 +208,13 @@
         let isForcingScroll = false; // V6.9: 标记是否正在进行强制滚动
         // ------------------------------------
 
-        // --- V5.12 新增函数：动态更新哨兵高度 (保持不变) ---
+        // --- V5.12 新增函数：动态更新哨兵高度 (V7.2 优化: 等于 chatBox 高度) ---
         function updateSentinelHeight() {
+            // 获取 chatBox 的可视高度
             const chatBoxHeight = chatBox.clientHeight;
-            scrollSentinel.style.height = (chatBoxHeight + 10) + 'px';
+            
+            // ⭐ V7.2 优化: 将哨兵高度设置为 chatBox 的高度，确保有足够的空间将消息推到顶部。
+            scrollSentinel.style.height = chatBoxHeight + 'px';
         }
 
         // --- 中断动画函数 (保持不变) ---
@@ -467,7 +470,7 @@
             }
         }
 
-        // --- 核心功能函数：sendMessage (🚀 V7.1: 用户消息置顶滚动) ---
+        // --- 核心功能函数：sendMessage (V7.1: 用户消息置顶滚动) ---
         async function sendMessage() {
             const message = messageInput.value.trim();
             if (message === '') return;
@@ -494,7 +497,7 @@
             
             updateSentinelHeight();
             
-            // ⭐ 核心改动：使用 setTimeout 确保 DOM 渲染完成，并将用户消息滚动到列表顶部 (block: 'start') ⭐
+            // ⭐ 核心功能：将用户消息滚动到列表顶部 (block: 'start') ⭐
             setTimeout(() => {
                 userMessageDiv.scrollIntoView({ 
                     block: 'start', // 滚动到视口开始位置 (即标题栏下方)
@@ -511,7 +514,6 @@
                 chatBox.insertBefore(aiMessageDiv, scrollSentinel); 
                 
                 // 插入 AI 消息后，再次滚动到 AI 消息的底部 (确保最新的内容在屏幕上，与用户消息置顶不冲突)
-                // 这里的 block: 'end' 是为了让 AI 消息和下面的输入框也保持可见
                 aiMessageDiv.scrollIntoView({ block: 'end', behavior: 'smooth' });
 
                 handleApiChat(aiMessageDiv, finalMessage, currentAbortController.signal);
@@ -519,7 +521,7 @@
         }
 
         // ===================================================
-        // === 🚀 V6.9 核心改动：向下滚动锁定在最新消息的位置 (保持不变) ===
+        // === V6.9 核心改动：向下滚动锁定在最新消息的位置 (保持不变) ===
         // ===================================================
         function checkAndLockScroll() {
             const currentScrollTop = chatBox.scrollTop;
