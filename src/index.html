@@ -69,12 +69,39 @@
             align-items: center; 
             justify-content: space-between; 
             flex-shrink: 0; 
-            position: relative; /* 🚀 V7.7 关键: 相对定位 */
+            position: relative; /* 相对定位 */
         }
-        .header-title { font-weight: 500; }
+        
+        /* 🚀 V7.8 标题呼吸动画 */
+        /* 标题文字样式 */
+        .header-title { 
+            font-weight: 500; 
+            /* 标题呼吸效果 */
+            animation: breathe-text 2s infinite alternate ease-in-out; 
+            transition: color 0.2s; /* 确保颜色切换平滑 */
+        }
+        
+        /* 🚀 V7.8 新增：标题文字呼吸动画 */
+        @keyframes breathe-text {
+            0% { 
+                opacity: 1;
+                /* 轻微光晕 */
+                text-shadow: 0 0 1px rgba(var(--color-brand-blue-rgb), 0.2); 
+            }
+            50% { 
+                opacity: 0.95; 
+                /* 增强光晕效果 */
+                text-shadow: 0 0 6px rgba(var(--color-brand-blue-rgb), 0.7); 
+            }
+            100% {
+                opacity: 1;
+                text-shadow: 0 0 1px rgba(var(--color-brand-blue-rgb), 0.2); 
+            }
+        }
+        
         .header-icon { font-size: 1em; } 
         
-        /* 🚀 V7.7 新增：标题栏欢迎语覆盖样式 */
+        /* 🚀 V7.8 修改：标题栏欢迎语样式 */
         .welcome-overlay {
             position: absolute;
             left: 50%;
@@ -82,20 +109,22 @@
             transform: translate(-50%, -50%); /* 居中 */
             font-size: 0.8em; 
             font-weight: 400;
-            color: var(--color-brand-blue); 
-            background-color: var(--bg-card);
+            
+            /* 🚀 V7.8 核心修改：字体颜色灰色，半透明，去除边框和阴影 */
+            color: #888888; /* 灰色 */
+            background-color: var(--bg-card); /* 保持背景，确保可读性 */
+            opacity: 0.7; /* 元素整体半透明效果 */
+            
             padding: 4px 12px;
             border-radius: 16px;
-            border: 1px solid var(--border-main);
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            transition: opacity 0.5s ease-out; 
+            /* 移除了 border 和 box-shadow */
             z-index: 10;
             white-space: nowrap;
         }
 
         /* 欢迎语消失动画 */
         @keyframes fade-out {
-            0% { opacity: 1; }
+            0% { opacity: 0.7; }
             100% { opacity: 0; visibility: hidden; }
         }
         .welcome-overlay.fading {
@@ -220,7 +249,8 @@
     <div class="chat-container">
         <div class="header">
             <span class="header-title" id="appTitleDisplay">AI 助手</span> 
-            <div id="welcomeMessageOverlay" class="welcome-overlay" style="display: none;"></div> <span class="header-icon">✨</span>
+            <div id="welcomeMessageOverlay" class="welcome-overlay" style="display: none;"></div> 
+            <span class="header-icon">✨</span>
         </div>
         <div class="chat-box" id="chatBox">
             <div id="scrollSentinel"></div>
@@ -238,7 +268,7 @@
         const sendButton = document.getElementById('sendButton');
         const newChatButton = document.getElementById('newChatIcon'); 
         const scrollSentinel = document.getElementById('scrollSentinel');
-        const welcomeMessageOverlay = document.getElementById('welcomeMessageOverlay'); // 🚀 V7.7 DOM 引用
+        const welcomeMessageOverlay = document.getElementById('welcomeMessageOverlay');
         
         const pageTitleElement = document.getElementById('pageTitle'); 
         const appTitleDisplayElement = document.getElementById('appTitleDisplay'); 
@@ -269,14 +299,14 @@
         function renderMarkdown(text) {
             let htmlText = text;
 
-            // 1. 处理代码块 (必须在所有其他行级解析之前完成)
+            // 1. 处理代码块 
             htmlText = htmlText.replace(/```(\w*)\n([\s\S]*?)```/g, function(match, lang, code) {
                 const escapedCode = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
                 const language = lang ? `<span class="code-lang" style="font-size: 0.8em; color: var(--color-code-lang); display: block; margin-bottom: 5px;">${lang}</span>` : '';
                 return `<pre><code>${language}${escapedCode}</code></pre>`;
             });
 
-            // 2. 表格解析 (基于行分割的多行处理)
+            // 2. 表格解析
             const lines = htmlText.split('\n');
             let outputLines = [];
             let inTable = false;
@@ -287,7 +317,7 @@
                 
                 const isSeparator = line.match(/^\|[ \t]*([: \-]*?\|)+[ \t]*$/);
 
-                if (!inTable && line.match(/^\|.*?\|$/) && i + 1 < lines.length && lines[i+1].trim().match(/^\|[ \-]*?\|[ \-]*?\|[ \-]*?\|[ \-]*?\|[ \-]*?\|[ \t]*$/)) {
+                if (!inTable && line.match(/^\|.*?\|$/) && i + 1 < lines.length && lines[i+1].trim().match(/^\|[ \t]*([: \-]*?\|)+[ \t]*$/)) {
                     const headerLine = lines[i];
                     outputLines.push('<table><thead><tr>');
                     const headers = headerLine.split('|').slice(1, -1);
@@ -299,7 +329,7 @@
 
                     outputLines.push('</tr></thead><tbody>');
                     inTable = true;
-                    i++; // 跳过分隔行
+                    i++; 
                     continue;
                 } else if (inTable && line.match(/^\|.*?\|$/)) {
                     const cells = line.split('|').slice(1, -1);
@@ -398,13 +428,13 @@
             });
         }
         
-        // --- 🚀 V7.7 新增：在标题栏显示欢迎语并定时消失 ---
+        // --- 🚀 V7.7：在标题栏显示欢迎语并定时消失 (逻辑保持不变) ---
         function showWelcomeMessage(text) {
             if (!text) return;
 
             welcomeMessageOverlay.textContent = text;
             welcomeMessageOverlay.style.display = 'block';
-            welcomeMessageOverlay.classList.remove('fading'); // 确保从头开始动画
+            welcomeMessageOverlay.classList.remove('fading'); 
 
             // 3000毫秒（3秒）后开始淡出
             setTimeout(() => {
@@ -419,7 +449,7 @@
             }, 3000); 
         }
 
-        // --- 🚀 V7.7 核心改动：fetchConfig (加载标题和显示欢迎语) ---
+        // --- fetchConfig (保持 V7.7 逻辑) ---
         async function fetchConfig() {
             updateSentinelHeight();
             try {
