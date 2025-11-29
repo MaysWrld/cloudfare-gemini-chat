@@ -57,7 +57,7 @@
         .chat-container { width: 100%; height: 100%; max-width: 960px; background-color: var(--bg-card); border-radius: 0; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2); display: flex; flex-direction: column; min-height: initial; overflow: hidden; }
         @media (min-width: 961px) { .chat-container { height: 90vh; border-radius: 28px; } }
         
-        /* 头部样式：使用 space-between 分隔左右元素 */
+        /* 头部样式：增加了 relative 定位以供子元素绝对定位 (V7.7) */
         .header { 
             padding: 16px 24px; 
             background-color: var(--bg-card); 
@@ -69,11 +69,41 @@
             align-items: center; 
             justify-content: space-between; 
             flex-shrink: 0; 
+            position: relative; /* 🚀 V7.7 关键: 相对定位 */
         }
         .header-title { font-weight: 500; }
         .header-icon { font-size: 1em; } 
+        
+        /* 🚀 V7.7 新增：标题栏欢迎语覆盖样式 */
+        .welcome-overlay {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%); /* 居中 */
+            font-size: 0.8em; 
+            font-weight: 400;
+            color: var(--color-brand-blue); 
+            background-color: var(--bg-card);
+            padding: 4px 12px;
+            border-radius: 16px;
+            border: 1px solid var(--border-main);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: opacity 0.5s ease-out; 
+            z-index: 10;
+            white-space: nowrap;
+        }
 
-        /* V6.2 精简新聊天图标按钮样式 (保留) */
+        /* 欢迎语消失动画 */
+        @keyframes fade-out {
+            0% { opacity: 1; }
+            100% { opacity: 0; visibility: hidden; }
+        }
+        .welcome-overlay.fading {
+            animation: fade-out 0.5s forwards;
+        }
+
+
+        /* V6.2 精简新聊天图标按钮样式 (保持不变) */
         .input-area .new-chat-icon-button {
             background: none;
             color: var(--text-main);
@@ -103,11 +133,11 @@
             display: flex; 
             flex-direction: column; 
             gap: 16px; 
-            /* 恢复 scroll-behavior: smooth */
             scroll-behavior: smooth; 
             -webkit-overflow-scrolling: touch; 
         }
         
+        /* 消息样式 (保持不变) */
         .message { 
             padding: 12px 18px; 
             border-radius: 20px; 
@@ -129,7 +159,7 @@
         }
         .ai-thinking { border: 1px solid var(--color-brand-blue); box-sizing: border-box; animation: breathe-border 1.5s infinite ease-in-out; padding: 11px 17px; }
 
-        /* === 🚀 V7.4/V7.3 新增：回弹动画效果 === */
+        /* === 回弹动画效果 (保持不变) === */
         @keyframes bounce-message {
             0% { transform: scale(1); box-shadow: none; }
             20% { transform: scale(1.01); }
@@ -189,7 +219,8 @@
 
     <div class="chat-container">
         <div class="header">
-            <span class="header-title" id="appTitleDisplay">AI 助手</span> <span class="header-icon">✨</span>
+            <span class="header-title" id="appTitleDisplay">AI 助手</span> 
+            <div id="welcomeMessageOverlay" class="welcome-overlay" style="display: none;"></div> <span class="header-icon">✨</span>
         </div>
         <div class="chat-box" id="chatBox">
             <div id="scrollSentinel"></div>
@@ -207,6 +238,7 @@
         const sendButton = document.getElementById('sendButton');
         const newChatButton = document.getElementById('newChatIcon'); 
         const scrollSentinel = document.getElementById('scrollSentinel');
+        const welcomeMessageOverlay = document.getElementById('welcomeMessageOverlay'); // 🚀 V7.7 DOM 引用
         
         const pageTitleElement = document.getElementById('pageTitle'); 
         const appTitleDisplayElement = document.getElementById('appTitleDisplay'); 
@@ -214,18 +246,15 @@
         // --- 【全局状态】 ---
         let currentAbortController = null; 
         let typingTimerIds = []; 
-        let isSentinelActive = false; // 🚀 V7.5 新增：控制哨兵模式的状态
+        let isSentinelActive = false; 
         // ------------------------------------
 
-        // --- 🚀 V7.5 核心改动：辅助函数：动态更新哨兵高度 (新增状态控制) ---
+        // --- 辅助函数：动态更新哨兵高度 (保持 V7.5 逻辑) ---
         function updateSentinelHeight() {
-            // 只有当哨兵被激活时，才设置一个高度来撑开底部空间
             if (isSentinelActive) {
                 const chatBoxHeight = chatBox.clientHeight;
-                // 使用 10px 作为底部间距
                 scrollSentinel.style.height = (chatBoxHeight + 10) + 'px';
             } else {
-                // 哨兵模式关闭时，高度设置为 0，让内容正常贴底
                 scrollSentinel.style.height = '0px';
             }
         }
@@ -236,7 +265,7 @@
             typingTimerIds = [];
         }
         
-        // --- 🚀 V6.5 核心改动：辅助函数：Markdown 渲染 (保持不变) ---
+        // --- 辅助函数：Markdown 渲染 (保持不变) ---
         function renderMarkdown(text) {
             let htmlText = text;
 
@@ -256,21 +285,14 @@
             for (let i = 0; i < lines.length; i++) {
                 const line = lines[i].trim();
                 
-                // 检查是否是表格分隔线（例如：|---|:---|---:）
                 const isSeparator = line.match(/^\|[ \t]*([: \-]*?\|)+[ \t]*$/);
 
-                if (!inTable && line.match(/^\|.*?\|$/) && i + 1 < lines.length && lines[i+1].trim().match(/^\|[ \t]*([: \-]*?\|)+[ \t]*$/)) {
-                    // 发现表格头和分隔符：| Header | Header | \n |---|---|
+                if (!inTable && line.match(/^\|.*?\|$/) && i + 1 < lines.length && lines[i+1].trim().match(/^\|[ \-]*?\|[ \-]*?\|[ \-]*?\|[ \-]*?\|[ \-]*?\|[ \t]*$/)) {
                     const headerLine = lines[i];
-                    
-                    // 开启表格结构
                     outputLines.push('<table><thead><tr>');
-                    
-                    // 解析 Header 行，注意：split('|') 会在首尾产生空字符串，故使用 slice(1, -1)
                     const headers = headerLine.split('|').slice(1, -1);
                     headerCells = headers.length;
                     
-                    // 渲染表头
                     headers.forEach(header => {
                         outputLines.push(`<th>${header.trim()}</th>`);
                     });
@@ -280,10 +302,8 @@
                     i++; // 跳过分隔行
                     continue;
                 } else if (inTable && line.match(/^\|.*?\|$/)) {
-                    // 表格内容行
                     const cells = line.split('|').slice(1, -1);
                     
-                    // 简单的列数校验
                     if (cells.length === headerCells) {
                         outputLines.push('<tr>');
                         cells.forEach(cell => {
@@ -291,38 +311,32 @@
                         });
                         outputLines.push('</tr>');
                     } else {
-                        // 列数不匹配，结束表格并处理为普通行
                         outputLines.push('</tbody></table>');
                         inTable = false;
                         outputLines.push(line);
                     }
                     continue;
                 } else if (inTable && line === '') {
-                    // 遇到空行，结束表格
                     outputLines.push('</tbody></table>');
                     inTable = false;
                     continue;
                 } else if (inTable) {
-                    // 遇到非表格行，结束表格
                     outputLines.push('</tbody></table>');
                     inTable = false;
                     outputLines.push(line);
                 } else {
-                    // 普通行
                     outputLines.push(line);
                 }
             }
             
-            // 确保表格在文件末尾被关闭
             if (inTable) {
                 outputLines.push('</tbody></table>');
             }
 
-            // 将处理后的行重新合并为 htmlText
             htmlText = outputLines.join('\n');
 
 
-            // 3. 处理标题、列表和强调（在表格和代码块之后处理）
+            // 3. 处理标题、列表和强调
             htmlText = htmlText.replace(/^## (.*$)/gim, '<h2>$1</h2>');
             htmlText = htmlText.replace(/^\* (.*$)/gim, '<ul><li>$1</li></ul>');
             htmlText = htmlText.replace(/<\/li>\n<ul>/gim, '</li>'); 
@@ -384,32 +398,29 @@
             });
         }
         
-        // --- 欢迎语的异步处理 (保持不变) ---
-        function displayWelcomeMessage(welcomeMessageDiv, welcomeText) {
-            let i = 0;
-            const delay = 2; 
-            const cursor = '<span style="opacity: 0.8; margin-left: 2px; color: var(--text-main);">▋</span>'; 
-            function typeWelcome() {
-                if (i < welcomeText.length) {
-                    try {
-                        welcomeMessageDiv.innerHTML = renderMarkdown(welcomeText.substring(0, i + 1)) + cursor;
-                        i++;
-                        const timerId = setTimeout(typeWelcome, delay);
-                        typingTimerIds.push(timerId); 
-                    } catch (e) {
-                        console.error("Welcome message typing error, falling back:", e);
-                        welcomeMessageDiv.innerHTML = renderMarkdown(welcomeText);
-                    }
-                } else {
-                    welcomeMessageDiv.innerHTML = renderMarkdown(welcomeText);
-                }
-            }
-            typeWelcome();
+        // --- 🚀 V7.7 新增：在标题栏显示欢迎语并定时消失 ---
+        function showWelcomeMessage(text) {
+            if (!text) return;
+
+            welcomeMessageOverlay.textContent = text;
+            welcomeMessageOverlay.style.display = 'block';
+            welcomeMessageOverlay.classList.remove('fading'); // 确保从头开始动画
+
+            // 3000毫秒（3秒）后开始淡出
+            setTimeout(() => {
+                welcomeMessageOverlay.classList.add('fading');
+                
+                // 动画结束后（0.5秒后）彻底隐藏
+                setTimeout(() => {
+                    welcomeMessageOverlay.style.display = 'none';
+                    welcomeMessageOverlay.classList.remove('fading');
+                }, 500); // 匹配 CSS 中的 animation duration 0.5s
+
+            }, 3000); 
         }
 
-        // --- fetchConfig (保持不变) ---
+        // --- 🚀 V7.7 核心改动：fetchConfig (加载标题和显示欢迎语) ---
         async function fetchConfig() {
-            // 初始时，哨兵不激活
             updateSentinelHeight();
             try {
                 const response = await fetch('/api/admin'); 
@@ -425,11 +436,8 @@
                     const defaultWelcome = '喂。你要问什么？快点。';
                     const welcomeText = config.welcomeMessage || defaultWelcome;
                     
-                    const welcomeMessageDiv = document.createElement('div');
-                    welcomeMessageDiv.classList.add('message', 'ai-message');
-                    chatBox.insertBefore(welcomeMessageDiv, scrollSentinel); 
-                    
-                    displayWelcomeMessage(welcomeMessageDiv, welcomeText);
+                    // 调用新的函数在标题栏显示欢迎语
+                    showWelcomeMessage(welcomeText); 
                     
                 } else {
                     appendMessage('ai', '呵，又来了？连个配置都连不上。');
@@ -464,7 +472,7 @@
             }
         }
 
-        // --- 🚀 V7.4 动画函数 (保持不变) ---
+        // --- 动画函数 (保持不变) ---
         function triggerMessageBounce(messageElement) {
             if (!messageElement.classList.contains('ai-message')) {
                 return;
@@ -482,7 +490,7 @@
         }
 
 
-        // --- handleApiChat (V7.5: 核心修改 - finally 块取消哨兵模式) ---
+        // --- handleApiChat (保持 V7.5 逻辑) ---
         async function handleApiChat(aiMessageDiv, userMessage, signal) {
             
             setTimeout(() => { aiMessageDiv.textContent = '思考中。。。'; }, 100);
@@ -510,7 +518,6 @@
                     await startTyping(aiMessageDiv, aiText); 
                     aiMessageDiv.classList.remove('ai-thinking');
                     
-                    // 打字完成后立即触发动画
                     triggerMessageBounce(aiMessageDiv);
                     
                 } else {
@@ -533,13 +540,12 @@
                 sendButton.disabled = false;
                 messageInput.placeholder = '向 AI 提问...';
                 
-                // 🚀 V7.5 核心：AI 回复完成后，关闭哨兵模式并更新高度
                 isSentinelActive = false; 
                 updateSentinelHeight();
             }
         }
 
-        // --- 核心功能函数：sendMessage (V7.5: 核心修改 - 启用哨兵模式) ---
+        // --- 核心功能函数：sendMessage (保持 V7.5 逻辑) ---
         async function sendMessage() {
             const message = messageInput.value.trim();
             if (message === '') return;
@@ -555,7 +561,6 @@
 
             const finalMessage = message; 
             
-            // 🚀 V7.5 核心：用户发送消息时，启用哨兵模式
             isSentinelActive = true; 
             
             const userMessageDiv = appendMessage('user', message); 
@@ -590,7 +595,6 @@
         newChatButton.addEventListener('click', startNewChat);
 
         document.addEventListener('DOMContentLoaded', fetchConfig);
-        // 窗口大小变化时，仍然需要更新哨兵高度，但更新后的高度由 isSentinelActive 决定
         window.addEventListener('resize', updateSentinelHeight); 
     </script>
 </body>
