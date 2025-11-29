@@ -106,7 +106,8 @@
             display: flex; 
             flex-direction: column; 
             gap: 16px; 
-            scroll-behavior: smooth; 
+            /* ⚠️ V6.7 移除 smooth，因为强制吸附需要即时滚动 */
+            scroll-behavior: auto; 
             -webkit-overflow-scrolling: touch; 
         }
         
@@ -219,6 +220,8 @@
         // --- 【全局状态】用于打断功能 ---
         let currentAbortController = null; 
         let typingTimerIds = []; 
+        let lastScrollTop = 0; // ⚠️ V6.7: 用于检测滚动方向
+        let isUserScrollingUp = false; // ⚠️ V6.7: 用户是否在向上滚动
         // ------------------------------------
 
         // --- V5.12 新增函数：动态更新哨兵高度 (保持不变) ---
@@ -233,18 +236,18 @@
             typingTimerIds = [];
         }
         
-        // --- 🚀 V6.5 核心改动：辅助函数：Markdown 渲染 (新增表格解析逻辑) ---
+        // --- 🚀 V6.5 核心改动：辅助函数：Markdown 渲染 (表格解析逻辑) ---
         function renderMarkdown(text) {
             let htmlText = text;
 
-            // 1. 处理代码块 (必须在所有其他行级解析之前完成)
+            // 1. 处理代码块
             htmlText = htmlText.replace(/```(\w*)\n([\s\S]*?)```/g, function(match, lang, code) {
                 const escapedCode = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
                 const language = lang ? `<span class="code-lang" style="font-size: 0.8em; color: var(--color-code-lang); display: block; margin-bottom: 5px;">${lang}</span>` : '';
                 return `<pre><code>${language}${escapedCode}</code></pre>`;
             });
 
-            // 2. 表格解析 (基于行分割的多行处理)
+            // 2. 表格解析
             const lines = htmlText.split('\n');
             let outputLines = [];
             let inTable = false;
@@ -252,35 +255,22 @@
 
             for (let i = 0; i < lines.length; i++) {
                 const line = lines[i].trim();
-                
-                // 检查是否是表格分隔线（例如：|---|:---|---:）
                 const isSeparator = line.match(/^\|[ \t]*([: \-]*?\|)+[ \t]*$/);
 
                 if (!inTable && line.match(/^\|.*?\|$/) && i + 1 < lines.length && lines[i+1].trim().match(/^\|[ \t]*([: \-]*?\|)+[ \t]*$/)) {
-                    // 发现表格头和分隔符：| Header | Header | \n |---|---|
                     const headerLine = lines[i];
-                    
-                    // 开启表格结构
                     outputLines.push('<table><thead><tr>');
-                    
-                    // 解析 Header 行，注意：split('|') 会在首尾产生空字符串，故使用 slice(1, -1)
                     const headers = headerLine.split('|').slice(1, -1);
                     headerCells = headers.length;
-                    
-                    // 渲染表头
                     headers.forEach(header => {
                         outputLines.push(`<th>${header.trim()}</th>`);
                     });
-
                     outputLines.push('</tr></thead><tbody>');
                     inTable = true;
-                    i++; // 跳过分隔行
+                    i++; 
                     continue;
                 } else if (inTable && line.match(/^\|.*?\|$/)) {
-                    // 表格内容行
                     const cells = line.split('|').slice(1, -1);
-                    
-                    // 简单的列数校验，防止意外换行或数据错误导致表格错乱
                     if (cells.length === headerCells) {
                         outputLines.push('<tr>');
                         cells.forEach(cell => {
@@ -288,38 +278,30 @@
                         });
                         outputLines.push('</tr>');
                     } else {
-                        // 列数不匹配，结束表格并处理为普通行
                         outputLines.push('</tbody></table>');
                         inTable = false;
                         outputLines.push(line);
                     }
                     continue;
                 } else if (inTable && line === '') {
-                    // 遇到空行，结束表格
                     outputLines.push('</tbody></table>');
                     inTable = false;
                     continue;
                 } else if (inTable) {
-                    // 遇到非表格行，结束表格
                     outputLines.push('</tbody></table>');
                     inTable = false;
                     outputLines.push(line);
                 } else {
-                    // 普通行
                     outputLines.push(line);
                 }
             }
-            
-            // 确保表格在文件末尾被关闭
             if (inTable) {
                 outputLines.push('</tbody></table>');
             }
 
-            // 将处理后的行重新合并为 htmlText
             htmlText = outputLines.join('\n');
 
-
-            // 3. 处理标题、列表和强调（在表格和代码块之后处理）
+            // 3. 处理标题、列表和强调
             htmlText = htmlText.replace(/^## (.*$)/gim, '<h2>$1</h2>');
             htmlText = htmlText.replace(/^\* (.*$)/gim, '<ul><li>$1</li></ul>');
             htmlText = htmlText.replace(/<\/li>\n<ul>/gim, '</li>'); 
@@ -333,7 +315,7 @@
         }
         // --- Markdown 渲染函数修改结束 ---
 
-        // --- 核心功能函数：appendMessage (保持不变) ---
+        // --- 核心功能函数：appendMessage (V6.7: 移除滚动平滑) ---
         function appendMessage(sender, text) {
             const messageDiv = document.createElement('div');
             messageDiv.classList.add('message');
@@ -348,7 +330,8 @@
             
             chatBox.insertBefore(messageDiv, scrollSentinel);
             
-            if (sender !== 'user') {
+            // V6.7: 仅在添加系统消息时才强制到底部，否则由强制吸附逻辑处理
+            if (sender === 'system') {
                 chatBox.scrollTop = chatBox.scrollHeight; 
             }
             return messageDiv;
@@ -365,7 +348,6 @@
                         try {
                             const currentText = rawText.substring(0, i + 1);
                             messageElement.innerHTML = renderMarkdown(currentText) + cursor;
-                            
                             i++;
                             const timerId = setTimeout(type, delay);
                             typingTimerIds.push(timerId); 
@@ -379,7 +361,6 @@
                         resolve();
                     }
                 }
-
                 type();
             });
         }
@@ -411,7 +392,6 @@
         // --- fetchConfig (保持不变) ---
         async function fetchConfig() {
             updateSentinelHeight();
-            
             try {
                 const response = await fetch('/api/admin'); 
                 
@@ -465,7 +445,7 @@
             }
         }
 
-        // --- handleApiChat (V6.6: 增加观察者和目标标记逻辑) ---
+        // --- handleApiChat (V6.7: 增加观察者和目标标记逻辑) ---
         async function handleApiChat(aiMessageDiv, userMessage, signal) {
             
             setTimeout(() => { aiMessageDiv.textContent = '思考中。。。'; }, 100);
@@ -492,7 +472,7 @@
                     
                     await startTyping(aiMessageDiv, aiText); 
                     aiMessageDiv.classList.remove('ai-thinking');
-                    // ⭐ V6.6 核心改动 1: 完成打字后标记为目标
+                    // V6.7 核心改动 1: 完成打字后标记为目标
                     aiMessageDiv.classList.add('new-ai-target'); 
                     
                 } else {
@@ -515,7 +495,7 @@
                 sendButton.disabled = false;
                 messageInput.placeholder = '向 AI 提问...';
                 
-                // ⭐ V6.6 核心改动 2: 只有在未中断且成功标记时才开始观察
+                // V6.7 核心改动 2: 只有在未中断且成功标记时才开始观察
                 if (!signal.aborted && aiMessageDiv.classList.contains('new-ai-target')) {
                     observeNewAIMessage();
                 }
@@ -544,7 +524,8 @@
             messageInput.placeholder = 'AI 正在思考...';
             
             updateSentinelHeight();
-            userMessageDiv.scrollIntoView({ block: 'start', behavior: 'smooth' });
+            // V6.7: 仅滚动到用户消息的开始位置
+            userMessageDiv.scrollIntoView({ block: 'start' }); 
             
             currentAbortController = new AbortController();
 
@@ -558,64 +539,89 @@
         }
 
         // ===================================================
-        // === 🚀 V6.6 新增：滚动回弹效果逻辑 (Intersection Observer) ===
+        // === 🚀 V6.7 核心改动：强制吸附滚动逻辑 (Intersection Observer) ===
         // ===================================================
         let observer = null;
+        let latestAiMessage = null; // 追踪最新的 AI 消息元素
 
         function initializeObserver() {
             if (!('IntersectionObserver' in window)) {
-                console.warn("IntersectionObserver not supported, bounce effect disabled.");
                 return;
             }
 
+            // 观察者选项：rootMargin 设置为负值，表示目标元素距离 chatBox 底部 (0) 上滑 50px 时，算作脱离。
+            // 50px 模拟输入框的高度。
             const options = {
                 root: chatBox, 
-                rootMargin: '0px',
-                threshold: 0.8 // 当目标元素的 80% 进入视口时触发
+                rootMargin: '0px 0px -50px 0px', 
+                threshold: 0.0 // 只要有一点进入/脱离就触发
             };
 
             observer = new IntersectionObserver((entries, observer) => {
                 entries.forEach(entry => {
-                    // 检查目标是否进入了视口
-                    if (entry.isIntersecting) {
-                        const target = entry.target;
-                        
-                        // 确保它是一个新的、等待触发的 AI 消息
-                        if (target.classList.contains('new-ai-target')) {
-                            
-                            target.classList.remove('new-ai-target');
-                            
-                            // 移除观察者，避免性能浪费
-                            observer.unobserve(target); 
-                            
-                            // 触发回弹动画
-                            target.classList.add('bounced');
-                            
-                            // 动画结束后移除动画类
-                            target.addEventListener('animationend', () => {
-                                target.classList.remove('bounced');
-                            }, { once: true });
+                    const target = entry.target;
+
+                    // --- 1. 回弹动画逻辑 (V6.6) ---
+                    if (target.classList.contains('new-ai-target') && entry.isIntersecting && entry.intersectionRatio >= 0.8) {
+                        target.classList.remove('new-ai-target');
+                        target.classList.add('bounced');
+                        target.addEventListener('animationend', () => {
+                            target.classList.remove('bounced');
+                        }, { once: true });
+                    }
+                    
+                    // --- 2. 强制吸附逻辑 (V6.7) ---
+                    // 仅对最新的 AI 消息执行吸附
+                    if (target === latestAiMessage) {
+                        // 检查用户是否在向上滚动
+                        if (isUserScrollingUp) {
+                            // 检查最新的 AI 消息是否已脱离底部安全区
+                            if (!entry.isIntersecting) {
+                                // ⚠️ 强制滚动到最底部。这将导致页面抖动。
+                                chatBox.scrollTop = chatBox.scrollHeight;
+                                // 强制滚动后，用户正在向上滚动的状态可能被重置，但为了防止抖动，我们让滚动事件继续判断。
+                                console.log("⚠️ 强制吸附触发！"); 
+                            }
                         }
                     }
                 });
             }, options);
         }
 
+        // V6.7: 监听滚动事件来判断方向
+        chatBox.addEventListener('scroll', () => {
+            const currentScrollTop = chatBox.scrollTop;
+            if (currentScrollTop < lastScrollTop) {
+                isUserScrollingUp = true;
+            } else if (currentScrollTop > lastScrollTop) {
+                isUserScrollingUp = false;
+            } else {
+                // 滚动位置没变，保持状态
+            }
+            lastScrollTop = currentScrollTop <= 0 ? 0 : currentScrollTop;
+        });
+
+
         function observeNewAIMessage() {
+            // 取消对旧的最新消息的观察
+            if (latestAiMessage && observer) {
+                 observer.unobserve(latestAiMessage);
+            }
+            
             // 找到所有待观察的新 AI 消息
-            const newTargets = chatBox.querySelectorAll('.new-ai-target');
-            newTargets.forEach(target => {
-                // 仅观察尚未被观察的元素
-                if (observer && !target.dataset.observed) {
-                    observer.observe(target);
-                    target.dataset.observed = 'true'; // 标记为已设置观察
-                }
-            });
+            const newTargets = chatBox.querySelectorAll('.new-ai-target, .ai-message:not(.new-ai-target)');
+            
+            // 找到最后一个 AI 消息作为目标
+            latestAiMessage = newTargets[newTargets.length - 1]; 
+
+            if (latestAiMessage && observer) {
+                observer.observe(latestAiMessage);
+            }
         }
         // ===================================================
 
 
-        // --- 事件监听器 (部分调整以引入 Observer) ---
+        // --- 事件监听器 (整合初始化) ---
         sendButton.addEventListener('click', sendMessage);
         
         messageInput.addEventListener('keydown', function(event) {
@@ -629,7 +635,7 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             fetchConfig(); // 原始的初始化调用
-            initializeObserver(); // ⭐ 新增：初始化观察者
+            initializeObserver(); // ⭐ 初始化观察者
         });
         window.addEventListener('resize', updateSentinelHeight);
     </script>
