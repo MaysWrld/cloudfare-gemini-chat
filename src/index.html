@@ -314,6 +314,16 @@
             htmlText = htmlText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
             htmlText = htmlText.replace(/\*(.*?)\*/g, '<em>$1</em>');
             
+            // 🚀 V6.6 Fix: 清理多余的换行符和空格，解决表格上方留白问题
+            // 1. 将连续三个或更多的 \n 压缩成两个 \n
+            htmlText = htmlText.replace(/\n{3,}/g, '\n\n'); 
+            // 2. 删除块级元素（如表格/代码块/列表）前后的多余换行符/空格
+            //    防止这些块级元素周围的 \n 被转换成不必要的 <br>
+            htmlText = htmlText.replace(/\s*<table>/g, '<table>');
+            htmlText = htmlText.replace(/<\/table>\s*/g, '</table>');
+            htmlText = htmlText.replace(/<\/pre>\s*/g, '</pre>');
+            htmlText = htmlText.replace(/<\/ul>\s*/g, '</ul>'); // 清理列表后的空格和换行符
+
             // 4. 替换最后的换行符为 <br>
             return htmlText.replace(/\n/g, '<br>');
         }
