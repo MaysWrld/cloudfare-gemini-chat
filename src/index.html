@@ -131,6 +131,20 @@
         }
         .ai-thinking { border: 1px solid var(--color-brand-blue); box-sizing: border-box; animation: breathe-border 1.5s infinite ease-in-out; padding: 11px 17px; }
 
+        /* =================================================== */
+        /* === 🚀 V6.6 新增：回弹动画效果 === */
+        /* =================================================== */
+        @keyframes bounce-message {
+            0% { transform: scale(1); box-shadow: none; }
+            20% { transform: scale(1.01); }
+            40% { transform: scale(1); }
+            60% { transform: scale(1.005); box-shadow: 0 0 10px rgba(var(--color-brand-blue-rgb), 0.5); }
+            100% { transform: scale(1); box-shadow: none; }
+        }
+        .ai-message.bounced {
+            animation: bounce-message 0.8s ease-out 1; /* 执行一次 */
+        }
+
         /* --- Markdown 样式 --- */
         .ai-message pre { background-color: var(--color-code-bg); padding: 10px; border-radius: 8px; overflow-x: auto; margin-top: 10px; font-family: Consolas, Monaco, 'Courier New', monospace; font-size: 0.9em; white-space: pre-wrap; }
         .ai-message pre code { display: block; padding-left: 0; }
@@ -199,8 +213,8 @@
         const newChatButton = document.getElementById('newChatIcon'); 
         const scrollSentinel = document.getElementById('scrollSentinel');
         
-        const pageTitleElement = document.getElementById('pageTitle'); // 获取新的标题元素
-        const appTitleDisplayElement = document.getElementById('appTitleDisplay'); // 获取聊天头部标题元素
+        const pageTitleElement = document.getElementById('pageTitle');
+        const appTitleDisplayElement = document.getElementById('appTitleDisplay'); 
         
         // --- 【全局状态】用于打断功能 ---
         let currentAbortController = null; 
@@ -210,7 +224,7 @@
         // --- V5.12 新增函数：动态更新哨兵高度 (保持不变) ---
         function updateSentinelHeight() {
             const chatBoxHeight = chatBox.clientHeight;
-            scrollSentinel.style.height = (chatBoxHeight + 8) + 'px';
+            scrollSentinel.style.height = (chatBoxHeight + 10) + 'px';
         }
 
         // --- 中断动画函数 (保持不变) ---
@@ -234,7 +248,7 @@
             const lines = htmlText.split('\n');
             let outputLines = [];
             let inTable = false;
-            let headerCells = 0; // 用于验证分隔线和内容行
+            let headerCells = 0; 
 
             for (let i = 0; i < lines.length; i++) {
                 const line = lines[i].trim();
@@ -350,9 +364,6 @@
                     if (i < rawText.length) {
                         try {
                             const currentText = rawText.substring(0, i + 1);
-                            // 注意：这里调用 renderMarkdown 会对部分渲染的内容进行重复处理（如 H2, 列表），
-                            // 但由于表格解析是基于完整文本进行的，在打字机过程中，表格不会完全显示，
-                            // 实际的渲染会在字符级别进行，效果是可以接受的。
                             messageElement.innerHTML = renderMarkdown(currentText) + cursor;
                             
                             i++;
@@ -454,7 +465,7 @@
             }
         }
 
-        // --- handleApiChat (保持不变) ---
+        // --- handleApiChat (V6.6: 增加观察者和目标标记逻辑) ---
         async function handleApiChat(aiMessageDiv, userMessage, signal) {
             
             setTimeout(() => { aiMessageDiv.textContent = '思考中。。。'; }, 100);
@@ -481,6 +492,8 @@
                     
                     await startTyping(aiMessageDiv, aiText); 
                     aiMessageDiv.classList.remove('ai-thinking');
+                    // ⭐ V6.6 核心改动 1: 完成打字后标记为目标
+                    aiMessageDiv.classList.add('new-ai-target'); 
                     
                 } else {
                     const errorMessage = data.error ? `AI 接口错误：${data.error.message || data.error}` : `请求失败，状态码：${response.status}`;
@@ -501,6 +514,11 @@
                 currentAbortController = null; 
                 sendButton.disabled = false;
                 messageInput.placeholder = '向 AI 提问...';
+                
+                // ⭐ V6.6 核心改动 2: 只有在未中断且成功标记时才开始观察
+                if (!signal.aborted && aiMessageDiv.classList.contains('new-ai-target')) {
+                    observeNewAIMessage();
+                }
             }
         }
 
@@ -539,7 +557,65 @@
             }, 50);
         }
 
-        // --- 事件监听器 (保持不变) ---
+        // ===================================================
+        // === 🚀 V6.6 新增：滚动回弹效果逻辑 (Intersection Observer) ===
+        // ===================================================
+        let observer = null;
+
+        function initializeObserver() {
+            if (!('IntersectionObserver' in window)) {
+                console.warn("IntersectionObserver not supported, bounce effect disabled.");
+                return;
+            }
+
+            const options = {
+                root: chatBox, 
+                rootMargin: '0px',
+                threshold: 0.8 // 当目标元素的 80% 进入视口时触发
+            };
+
+            observer = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    // 检查目标是否进入了视口
+                    if (entry.isIntersecting) {
+                        const target = entry.target;
+                        
+                        // 确保它是一个新的、等待触发的 AI 消息
+                        if (target.classList.contains('new-ai-target')) {
+                            
+                            target.classList.remove('new-ai-target');
+                            
+                            // 移除观察者，避免性能浪费
+                            observer.unobserve(target); 
+                            
+                            // 触发回弹动画
+                            target.classList.add('bounced');
+                            
+                            // 动画结束后移除动画类
+                            target.addEventListener('animationend', () => {
+                                target.classList.remove('bounced');
+                            }, { once: true });
+                        }
+                    }
+                });
+            }, options);
+        }
+
+        function observeNewAIMessage() {
+            // 找到所有待观察的新 AI 消息
+            const newTargets = chatBox.querySelectorAll('.new-ai-target');
+            newTargets.forEach(target => {
+                // 仅观察尚未被观察的元素
+                if (observer && !target.dataset.observed) {
+                    observer.observe(target);
+                    target.dataset.observed = 'true'; // 标记为已设置观察
+                }
+            });
+        }
+        // ===================================================
+
+
+        // --- 事件监听器 (部分调整以引入 Observer) ---
         sendButton.addEventListener('click', sendMessage);
         
         messageInput.addEventListener('keydown', function(event) {
@@ -551,7 +627,10 @@
 
         newChatButton.addEventListener('click', startNewChat);
 
-        document.addEventListener('DOMContentLoaded', fetchConfig);
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchConfig(); // 原始的初始化调用
+            initializeObserver(); // ⭐ 新增：初始化观察者
+        });
         window.addEventListener('resize', updateSentinelHeight);
     </script>
 </body>
