@@ -214,13 +214,20 @@
         // --- 【全局状态】 ---
         let currentAbortController = null; 
         let typingTimerIds = []; 
+        let isSentinelActive = false; // 🚀 V7.5 新增：控制哨兵模式的状态
         // ------------------------------------
 
-        // --- V5.12 新增函数：动态更新哨兵高度 (恢复到原始逻辑) ---
+        // --- 🚀 V7.5 核心改动：辅助函数：动态更新哨兵高度 (新增状态控制) ---
         function updateSentinelHeight() {
-            // 恢复 V5.12 原始逻辑，确保有 10px 的额外空间
-            const chatBoxHeight = chatBox.clientHeight;
-            scrollSentinel.style.height = (chatBoxHeight + 10) + 'px';
+            // 只有当哨兵被激活时，才设置一个高度来撑开底部空间
+            if (isSentinelActive) {
+                const chatBoxHeight = chatBox.clientHeight;
+                // 使用 10px 作为底部间距
+                scrollSentinel.style.height = (chatBoxHeight + 10) + 'px';
+            } else {
+                // 哨兵模式关闭时，高度设置为 0，让内容正常贴底
+                scrollSentinel.style.height = '0px';
+            }
         }
 
         // --- 中断动画函数 (保持不变) ---
@@ -329,7 +336,7 @@
         }
         // --- Markdown 渲染函数修改结束 ---
 
-        // --- 核心功能函数：appendMessage (恢复到原始逻辑) ---
+        // --- 核心功能函数：appendMessage (保持不变) ---
         function appendMessage(sender, text) {
             const messageDiv = document.createElement('div');
             messageDiv.classList.add('message');
@@ -402,6 +409,7 @@
 
         // --- fetchConfig (保持不变) ---
         async function fetchConfig() {
+            // 初始时，哨兵不激活
             updateSentinelHeight();
             try {
                 const response = await fetch('/api/admin'); 
@@ -456,22 +464,17 @@
             }
         }
 
-        // --- 🚀 V7.4 核心改动：动画函数 (回复完成后调用) ---
+        // --- 🚀 V7.4 动画函数 (保持不变) ---
         function triggerMessageBounce(messageElement) {
-            // 确保只在 ai-message 消息上触发
             if (!messageElement.classList.contains('ai-message')) {
                 return;
             }
             
-            // 移除旧的动画，以便可以再次触发
             messageElement.classList.remove('bounced');
-            
-            // 强制回流/重绘，确保动画可以重新开始
             void messageElement.offsetWidth; 
 
             messageElement.classList.add('bounced');
             
-            // 动画结束后移除类，清理 DOM
             messageElement.addEventListener('animationend', function handler() {
                 messageElement.classList.remove('bounced');
                 messageElement.removeEventListener('animationend', handler);
@@ -479,7 +482,7 @@
         }
 
 
-        // --- handleApiChat (V7.4: 移除 Observer 逻辑，改为直接调用动画) ---
+        // --- handleApiChat (V7.5: 核心修改 - finally 块取消哨兵模式) ---
         async function handleApiChat(aiMessageDiv, userMessage, signal) {
             
             setTimeout(() => { aiMessageDiv.textContent = '思考中。。。'; }, 100);
@@ -507,7 +510,7 @@
                     await startTyping(aiMessageDiv, aiText); 
                     aiMessageDiv.classList.remove('ai-thinking');
                     
-                    // 🚀 V7.4 核心：打字完成后立即触发动画
+                    // 打字完成后立即触发动画
                     triggerMessageBounce(aiMessageDiv);
                     
                 } else {
@@ -529,10 +532,14 @@
                 currentAbortController = null; 
                 sendButton.disabled = false;
                 messageInput.placeholder = '向 AI 提问...';
+                
+                // 🚀 V7.5 核心：AI 回复完成后，关闭哨兵模式并更新高度
+                isSentinelActive = false; 
+                updateSentinelHeight();
             }
         }
 
-        // --- 核心功能函数：sendMessage (恢复到原始逻辑) ---
+        // --- 核心功能函数：sendMessage (V7.5: 核心修改 - 启用哨兵模式) ---
         async function sendMessage() {
             const message = messageInput.value.trim();
             if (message === '') return;
@@ -547,7 +554,10 @@
             }
 
             const finalMessage = message; 
-
+            
+            // 🚀 V7.5 核心：用户发送消息时，启用哨兵模式
+            isSentinelActive = true; 
+            
             const userMessageDiv = appendMessage('user', message); 
             messageInput.value = '';
             sendButton.disabled = true;
@@ -567,7 +577,7 @@
             }, 50);
         }
 
-        // --- 事件监听器 (恢复到原始逻辑) ---
+        // --- 事件监听器 (保持不变) ---
         sendButton.addEventListener('click', sendMessage);
         
         messageInput.addEventListener('keydown', function(event) {
@@ -580,7 +590,8 @@
         newChatButton.addEventListener('click', startNewChat);
 
         document.addEventListener('DOMContentLoaded', fetchConfig);
-        window.addEventListener('resize', updateSentinelHeight);
+        // 窗口大小变化时，仍然需要更新哨兵高度，但更新后的高度由 isSentinelActive 决定
+        window.addEventListener('resize', updateSentinelHeight); 
     </script>
 </body>
 </html>
