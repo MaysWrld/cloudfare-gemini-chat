@@ -100,8 +100,8 @@
         .chat-box { 
             flex-grow: 1; 
             padding: 20px 24px; 
-            /* 底部冗余空间：保留 24px 确保最后一个气泡和输入框上方有 24px 间距 */
-            padding-bottom: 24px; 
+            /* 底部冗余空间：调整为 20px，和顶部保持一致 */
+            padding-bottom: 20px; 
             
             overflow-y: auto; 
             display: flex; 
@@ -150,7 +150,7 @@
         .ai-message ul { padding-left: 20px; margin-top: 5px; margin-bottom: 5px; list-style: disc; }
         .ai-message strong { font-weight: 700; }
 
-        /* 表格样式：V7.0 调整，设置统一外边距 */
+        /* 表格样式 */
         .ai-message table {
             border-collapse: collapse; 
             margin: 10px 0; /* 统一设置上下边距 */
@@ -171,12 +171,13 @@
             color: var(--text-header);
         }
 
-        /* 🚀 V7.0 恢复：哨兵模式 CSS */
+        /* 🚀 V8.0 哨兵优化：设置为一个固定的、较小的偏移量 */
         #scrollSentinel {
+            height: 44px; /* 设置一个和输入框高度相近的固定高度 */
             min-height: 1px;
             flex-shrink: 0;
             visibility: hidden; 
-            /* V7.0 关键：将其作为第一个元素，确保聊天记录能完全滚动到顶部 */
+            /* V8.0 关键：将其作为第一个元素，确保聊天记录能完全滚动到顶部 */
         }
 
 
@@ -221,12 +222,11 @@
         let typingTimerIds = []; 
         // ------------------------------------
 
-        // --- 🚀 V7.0 恢复：动态更新哨兵高度函数 ---
+        // --- 🚀 V8.0 调整：移除动态更新哨兵高度，改为固定值，该函数不再需要 ---
         function updateSentinelHeight() {
-            // 确保哨兵的高度至少是 chatBox 的高度，这样第一条消息才能滚动到最顶端
-            const chatBoxHeight = chatBox.clientHeight;
-            // 额外加上 10px 确保有足够的拉伸空间
-            scrollSentinel.style.height = (chatBoxHeight + 10) + 'px'; 
+             // 仅供 DOMContentLoaded 时调用，不再进行动态计算，依赖 CSS 中的固定高度。
+             // 这么做可以减少空余行。
+             console.log("Sentinel height is fixed in CSS for V8.0.");
         }
 
         // --- 中断动画函数 (保持不变) ---
@@ -235,7 +235,7 @@
             typingTimerIds = [];
         }
         
-        // --- 🚀 V7.0 核心改动：辅助函数：Markdown 渲染 (最终表格空白修复) ---
+        // --- 🚀 V8.0 核心改动：辅助函数：Markdown 渲染 (最终表格空白修复) ---
         function renderMarkdown(text) {
             let htmlText = text;
 
@@ -283,6 +283,7 @@
                         });
                         outputLines.push('</tr>');
                     } else {
+                        // 列数不匹配，结束表格并处理为普通行
                         outputLines.push('</tbody></table>');
                         inTable = false;
                         outputLines.push(line);
@@ -292,8 +293,7 @@
                     // 遇到空行，结束表格
                     outputLines.push('</tbody></table>');
                     inTable = false;
-                    outputLines.push(line); 
-                    continue;
+                    continue; // 忽略这个空行，避免产生多余的换行符
                 } else if (inTable) {
                     // 遇到非表格行，结束表格
                     outputLines.push('</tbody></table>');
@@ -301,7 +301,7 @@
                     outputLines.push(line);
                 } else {
                     // 普通行
-                    outputLines.push(line);
+                    outputLines.push(lines[i]); // 使用原始行，保留行首空格，避免破坏列表缩进
                 }
             }
             
@@ -321,30 +321,21 @@
             htmlText = htmlText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
             htmlText = htmlText.replace(/\*(.*?)\*/g, '<em>$1</em>');
             
-            // 4. 清理和压缩换行符
-            
-            // 4.1 核心清理：先对块级元素前后的空白和换行进行**贪婪**清理 
-            htmlText = htmlText.replace(/\s*(<pre|<ul>|<table>)/gi, '$1');
-            htmlText = htmlText.replace(/(<\/pre>|<\/ul>|<\/table>)\s*/gi, '$1');
+            // 4. 🚀 V8.0 核心修复：移除块级元素前后的多余换行符 (\n)
+            // 这能防止换行符被转换为 <br> 标签，从而消除表格、代码块前后的多余空白行
+            htmlText = htmlText.replace(/\n*(<(pre|table|h2|ul|ol))/gi, '$1');
+            htmlText = htmlText.replace(/(<\/(pre|table|h2|ul|ol)>)\n*/gi, '$1');
 
-            // 🚀 V7.0 最终表格修复：移除紧挨在 <table> 前面的所有换行符（\n）
-            // 这是为了确保即使在打字机效果中，表格前也不会因为 \n 转换成 <br> 而出现空行
-            htmlText = htmlText.replace(/\n*<table>/gi, '<table>');
 
-            // 5. 替换 \n 为 <br>
-            htmlText = htmlText.replace(/\n{3,}/g, '\n\n'); 
-            htmlText = htmlText.replace(/\n/g, '<br>');
-            
-
-            // 6. 清理可能残余在块级元素前后的 <br> (预防性清理)
-            htmlText = htmlText.replace(/<br>\s*(<pre|<ul>|<table>)/gi, '$1');
-            htmlText = htmlText.replace(/(<\/pre>|<\/ul>|<\/table>)\s*<br>/gi, '$1');
+            // 5. 替换 \n 为 <br> (处理剩余的文本换行)
+            htmlText = htmlText.replace(/\n{2,}/g, '\n\n'); // 压缩多余空行，保留两行
+            htmlText = htmlText.replace(/\n/g, '<br>'); // 将单行换行转为 <br>
 
             return htmlText;
         }
         // --- Markdown 渲染函数修改结束 ---
 
-        // --- 核心功能函数：appendMessage (V7.0 调整) ---
+        // --- 核心功能函数：appendMessage (保持不变) ---
         function appendMessage(sender, text) {
             const messageDiv = document.createElement('div');
             messageDiv.classList.add('message');
@@ -353,25 +344,25 @@
                 messageDiv.classList.add('user-message');
                 messageDiv.textContent = text; 
             } else {
-                messageDiv.classList.add('ai-message'); 
-                messageDiv.innerHTML = text;
-                
+                // V8.0: 如果不是 user，判断是 ai 还是 system
                 if (sender === 'system') {
-                    messageDiv.classList.remove('ai-message');
                     messageDiv.classList.add('system-message');
+                } else {
+                    messageDiv.classList.add('ai-message'); 
                 }
+                messageDiv.innerHTML = text; // 使用 innerHTML 承载 Markdown 渲染结果
             }
             
-            // 🚀 V7.0：添加到 chatBox 底部
-            chatBox.appendChild(messageDiv);
+            // 插入到哨兵之前 (确保新消息在最底部，哨兵始终是最后一个元素)
+            chatBox.insertBefore(messageDiv, scrollSentinel);
             
-            // 滚动到底部
+            // 滚动到最底部
             chatBox.scrollTop = chatBox.scrollHeight; 
             
             return messageDiv;
         }
         
-        // --- 打字机效果函数 (V7.0 调整) ---
+        // --- 打字机效果函数 (保持不变) ---
         function startTyping(messageElement, rawText, delay = 1) { 
             
             return new Promise(resolve => {
@@ -383,7 +374,7 @@
                         try {
                             const currentText = rawText.substring(0, i + 1);
                             
-                            // V7.0：不再需要临时样式，因为 Markdown 渲染器已从根本上清除了表格前的 \n
+                            // V8.0：使用修正后的 renderMarkdown
                             messageElement.innerHTML = renderMarkdown(currentText) + cursor;
                             
                             // 保持滚动到底部
@@ -407,7 +398,7 @@
             });
         }
         
-        // --- 欢迎语的异步处理 (V7.0 调整) ---
+        // --- 欢迎语的异步处理 (保持不变) ---
         function displayWelcomeMessage(welcomeMessageDiv, welcomeText) {
             let i = 0;
             const delay = 2; 
@@ -431,9 +422,9 @@
             typeWelcome();
         }
 
-        // --- fetchConfig (V7.0 恢复 updateSentinelHeight) ---
+        // --- fetchConfig (V8.0: 移除对 updateSentinelHeight 的 resize 监听依赖) ---
         async function fetchConfig() {
-            // 🚀 V7.0 恢复：初始化时设置哨兵高度
+            // V8.0: 不再需要动态调整，但保留调用以符合原逻辑，并在其中打印日志
             updateSentinelHeight();
             
             try {
@@ -457,7 +448,8 @@
                     
                     const welcomeMessageDiv = document.createElement('div');
                     welcomeMessageDiv.classList.add('message', 'ai-message');
-                    chatBox.appendChild(welcomeMessageDiv); 
+                    // 确保插入到哨兵之前
+                    chatBox.insertBefore(welcomeMessageDiv, scrollSentinel); 
                     
                     displayWelcomeMessage(welcomeMessageDiv, welcomeText);
                     
@@ -548,7 +540,7 @@
             }
         }
 
-        // --- 核心功能函数：sendMessage (V7.0 调整) ---
+        // --- 核心功能函数：sendMessage (V8.0 优化滚动) ---
         async function sendMessage() {
             const message = messageInput.value.trim();
             if (message === '') return;
@@ -569,7 +561,8 @@
             sendButton.disabled = true;
             messageInput.placeholder = 'AI 正在思考...';
             
-            // 确保用户消息显示后，滚动到视图顶部（因为哨兵在顶部）
+            // 🚀 V8.0 关键：利用 scrollSentinel 确保用户消息显示在页面最顶部 (scroll-margin-top 20px 配合)
+            // 确保用户消息显示后，滚动到视图顶部
             userMessageDiv.scrollIntoView({ block: 'start', behavior: 'smooth' });
             
             currentAbortController = new AbortController();
@@ -577,13 +570,14 @@
             setTimeout(() => {
                 const aiMessageDiv = document.createElement('div');
                 aiMessageDiv.classList.add('message', 'ai-message', 'ai-thinking'); 
-                chatBox.appendChild(aiMessageDiv); 
+                // 插入到哨兵之前
+                chatBox.insertBefore(aiMessageDiv, scrollSentinel); 
                 
                 handleApiChat(aiMessageDiv, finalMessage, currentAbortController.signal);
             }, 50);
         }
 
-        // --- 事件监听器 (V7.0 恢复 resize 监听) ---
+        // --- 事件监听器 (V8.0: 移除 updateSentinelHeight 的 resize 监听) ---
         sendButton.addEventListener('click', sendMessage);
         
         messageInput.addEventListener('keydown', function(event) {
@@ -596,8 +590,8 @@
         newChatButton.addEventListener('click', startNewChat);
 
         document.addEventListener('DOMContentLoaded', fetchConfig);
-        // 🚀 V7.0 恢复：窗口大小变化时更新哨兵高度
-        window.addEventListener('resize', updateSentinelHeight);
+        // 🚀 V8.0 移除：不再需要动态监听 resize，哨兵高度改为固定值。
+        // window.addEventListener('resize', updateSentinelHeight); 
     </script>
 </body>
 </html>
