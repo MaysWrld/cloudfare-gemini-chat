@@ -158,13 +158,6 @@
             color: var(--text-header);
         }
         /* 🚀 V6.5 新增：表格样式结束 */
-        
-        /* 🚀 V6.7 新增：水平线样式 */
-        .ai-message hr {
-            border: none;
-            border-top: 1px solid var(--border-main);
-            margin: 16px 0; /* 提供上下间距 */
-        }
 
         /* 输入区域样式 */
         .input-area { display: flex; padding: 16px 24px; border-top: 1px solid var(--border-main); background-color: var(--bg-card); align-items: center; gap: 10px; flex-shrink: 0; }
@@ -313,11 +306,6 @@
 
 
             // 3. 处理标题、列表和强调（在表格和代码块之后处理）
-            
-            // 🚀 V6.7 Fix: 处理水平线 (Horizontal Rule: ---, ***, ___)，解决连续横线问题
-            // 必须在列表和强调处理之前
-            htmlText = htmlText.replace(/^[ \t]*([*_-]{3,})[ \t]*$/gim, '<hr>');
-
             htmlText = htmlText.replace(/^## (.*$)/gim, '<h2>$1</h2>');
             htmlText = htmlText.replace(/^\* (.*$)/gim, '<ul><li>$1</li></ul>');
             htmlText = htmlText.replace(/<\/li>\n<ul>/gim, '</li>'); 
@@ -326,15 +314,6 @@
             htmlText = htmlText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
             htmlText = htmlText.replace(/\*(.*?)\*/g, '<em>$1</em>');
             
-            // 🚀 V6.6 Fix: 清理多余的换行符和空格，解决表格上方留白问题
-            // 1. 将连续三个或更多的 \n 压缩成两个 \n
-            htmlText = htmlText.replace(/\n{3,}/g, '\n\n'); 
-            // 2. 删除块级元素（如表格/代码块/列表）前后的多余换行符/空格
-            htmlText = htmlText.replace(/\s*<table>/g, '<table>');
-            htmlText = htmlText.replace(/<\/table>\s*/g, '</table>');
-            htmlText = htmlText.replace(/<\/pre>\s*/g, '</pre>');
-            htmlText = htmlText.replace(/<\/ul>\s*/g, '</ul>');
-
             // 4. 替换最后的换行符为 <br>
             return htmlText.replace(/\n/g, '<br>');
         }
@@ -371,6 +350,9 @@
                     if (i < rawText.length) {
                         try {
                             const currentText = rawText.substring(0, i + 1);
+                            // 注意：这里调用 renderMarkdown 会对部分渲染的内容进行重复处理（如 H2, 列表），
+                            // 但由于表格解析是基于完整文本进行的，在打字机过程中，表格不会完全显示，
+                            // 实际的渲染会在字符级别进行，效果是可以接受的。
                             messageElement.innerHTML = renderMarkdown(currentText) + cursor;
                             
                             i++;
