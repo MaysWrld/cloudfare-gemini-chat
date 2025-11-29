@@ -7,12 +7,12 @@
     <title id="pageTitle">AI 助手</title> <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2d000/svg' viewBox='0 0 100 100'><text y='-.1em' x='-.05em' font-size='90'>✨</text></svg>">
     <style>
         /* =================================================== */
-        /* === 颜色变量定义：深浅模式切换的核心 (V8.3) === */
+        /* === 颜色变量定义：深浅模式切换的核心 (V8.4 金色主题) === */
         /* =================================================== */
         :root {
             /* Light Mode Variables */
             --bg-main: #f0f4f9;
-            --bg-card: rgba(255, 255, 255, 0.7); /* 🚀 V8.3 核心修改：更高透明度 (0.7) */
+            --bg-card: rgba(255, 255, 255, 0.7); /* 🚀 V8.3：更高透明度 (0.7) */
             --bg-input: #f8f9fa;
             --text-main: #3c4043;
             --text-header: #202124;
@@ -26,15 +26,17 @@
             --color-focus-blue: #8ab4f8;
             --color-brand-blue: #1a73e8;
             --color-brand-blue-rgb: 26, 115, 232;
-            --color-particle: #4285f4; /* 粒子颜色 */
-            --color-particle-line: #0088ff; /* 🚀 V8.2：更明显的线条颜色 */
+            
+            /* 🚀 V8.4 核心修改：金色主题 */
+            --color-particle: #FFD700; /* 标准金色 */
+            --color-particle-line: #FFA500; /* 橙金色，连线更明显 */
         }
 
         /* 深色模式：根据设备设置覆盖颜色变量 */
         @media (prefers-color-scheme: dark) {
             :root {
                 --bg-main: #121212;
-                --bg-card: rgba(32, 32, 32, 0.7); /* 🚀 V8.3 核心修改：更高透明度 (0.7) */
+                --bg-card: rgba(32, 32, 32, 0.7); /* 🚀 V8.3：更高透明度 (0.7) */
                 --bg-input: #303030;
                 --text-main: #e0e0e0;
                 --text-header: #f5f5f5;
@@ -48,8 +50,10 @@
                 --color-focus-blue: #5b92e5;
                 --color-brand-blue: #5b92e5;
                 --color-brand-blue-rgb: 91, 146, 229; 
-                --color-particle: #8ab4f8; /* 深色模式粒子颜色 */
-                --color-particle-line: #b0d0ff; /* 🚀 V8.2：更明显的线条颜色 */
+                
+                /* 🚀 V8.4 核心修改：金色主题 */
+                --color-particle: #FFCC00; /* 亮金色 */
+                --color-particle-line: #FFEB80; /* 淡金色连线 */
             }
         }
         
@@ -69,7 +73,7 @@
             z-index: -1; 
         }
 
-        /* 聊天容器：使用半透明背景并确保在 Canvas 上方 */
+        /* 聊天容器：使用高透明度背景 */
         .chat-container { 
             width: 100%; 
             height: 100%; 
@@ -87,7 +91,7 @@
 
         @media (min-width: 961px) { .chat-container { height: 90vh; border-radius: 28px; } }
         
-        /* 头部样式：使用半透明背景 */
+        /* 头部样式：使用高透明度背景 */
         .header { 
             padding: 16px 24px; 
             background-color: var(--bg-card); /* 🚀 V8.3：更高透明度 */
@@ -134,10 +138,10 @@
             left: 50%;
             top: 50%;
             transform: translate(-50%, -50%);
-            font-size: 0.8em; /* 在这里调整字体大小 */
+            font-size: 0.8em; 
             font-weight: 400;
             color: #888888;
-            background-color: var(--bg-card); /* 🚀 V8.3：更高透明度 */
+            background-color: var(--bg-card); 
             opacity: 0.7; 
             padding: 4px 12px;
             border-radius: 16px;
@@ -250,7 +254,7 @@
             color: var(--text-header);
         }
 
-        /* 输入区域样式：使用半透明背景 */
+        /* 输入区域样式：使用高透明度背景 */
         .input-area { display: flex; padding: 16px 24px; border-top: 1px solid var(--border-main); background-color: var(--bg-card); /* 🚀 V8.3：更高透明度 */ align-items: center; gap: 10px; flex-shrink: 0; }
         
         #messageInput { flex-grow: 1; padding: 12px 18px; border: 1px solid var(--border-main); border-radius: 24px; font-size: 1em; outline: none; transition: border-color 0.2s, box-shadow 0.2s; background-color: var(--bg-input); color: var(--text-main); }
@@ -381,7 +385,7 @@
                             // 距离越远，透明度越低
                             const opacity = 1 - (distance / maxDistance);
                             ctx.strokeStyle = lineColor;
-                            ctx.globalAlpha = opacity * 0.8; // 🚀 V8.2 提高连线不透明度
+                            ctx.globalAlpha = opacity * 0.8; // 保持较高的连线不透明度
                             ctx.lineWidth = 1;
                             ctx.beginPath();
                             ctx.moveTo(p1.x, p1.y);
