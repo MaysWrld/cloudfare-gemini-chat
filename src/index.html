@@ -67,16 +67,14 @@
             font-weight: 500; 
             display: flex; 
             align-items: center; 
-            /* ⭐ V6.4 关键：左右对齐分离 ⭐ */
             justify-content: space-between; 
             flex-shrink: 0; 
         }
-        /* V6.4 新增：确保左右元素大小一致 */
         .header-title { font-weight: 500; }
-        .header-icon { font-size: 1em; } /* 保持图标和文字大小一致 */
+        .header-icon { font-size: 1em; } 
 
 
-        /* V6.2 精简新聊天图标按钮样式 (保留) */
+        /* 新建聊天图标按钮样式 */
         .input-area .new-chat-icon-button {
             background: none;
             color: var(--text-main);
@@ -97,14 +95,13 @@
             background-color: var(--color-ai);
             border-color: var(--color-focus-blue);
         }
-        /* 按钮样式结束 */
 
+        /* 聊天气泡区域 */
         .chat-box { 
             flex-grow: 1; 
             padding: 20px 24px; 
-            /* 🚀 V6.7 修正：调整底部内边距，消除底部冗余空间 */
-            padding-bottom: 8px; /* 12px (message padding-top) + 16px (gap) - 20px (原始 padding) = -8px (不合理) -> 尝试一个较小的值 */
-            padding-bottom: 16px; /* 最终气泡底部与输入框上方应有约 16px 间隙 */
+            /* 优化：消除底部冗余空间，使最后一个气泡到底部留出 16px 间隙 */
+            padding-bottom: 24px; 
             
             overflow-y: auto; 
             display: flex; 
@@ -136,20 +133,29 @@
         .ai-thinking { border: 1px solid var(--color-brand-blue); box-sizing: border-box; animation: breathe-border 1.5s infinite ease-in-out; padding: 11px 17px; }
 
         /* --- Markdown 样式 --- */
-        .ai-message pre { background-color: var(--color-code-bg); padding: 10px; border-radius: 8px; overflow-x: auto; margin-top: 10px; font-family: Consolas, Monaco, 'Courier New', monospace; font-size: 0.9em; white-space: pre-wrap; }
+        .ai-message pre { 
+            background-color: var(--color-code-bg); 
+            padding: 10px; 
+            border-radius: 8px; 
+            overflow-x: auto; 
+            margin: 10px 0; /* 优化：确保代码块上下有间隙 */
+            font-family: Consolas, Monaco, 'Courier New', monospace; 
+            font-size: 0.9em; 
+            white-space: pre-wrap; 
+            word-break: break-all; /* 防止长行溢出 */
+        }
         .ai-message pre code { display: block; padding-left: 0; }
         .ai-message h2 { font-size: 1.2em; font-weight: 600; margin-top: 15px; margin-bottom: 5px; color: var(--color-brand-blue); }
         .ai-message ul { padding-left: 20px; margin-top: 5px; margin-bottom: 5px; list-style: disc; }
         .ai-message strong { font-weight: 700; }
 
-        /* 🚀 V6.7 修正：移除默认 margin，并用负 margin 抵消表格上方可能多余的间隙 */
+        /* 表格样式：解决空行问题的关键 CSS 调整 */
         .ai-message table {
-            border-collapse: collapse; /* 合并边框 */
-            margin: 0; /* 移除默认 margin */
-            margin-top: -12px; /* 抵消表格前一个 <br> 带来的额外空间或 markdown 渲染的误差 */
+            border-collapse: collapse; 
+            margin: 10px 0; /* 统一设置上下边距 */
             max-width: 100%;
-            overflow-x: auto; /* 确保表格溢出时可以滚动 */
-            display: block; /* 允许在小屏幕上滚动 */
+            overflow-x: auto; 
+            display: block; 
         }
         .ai-message th, .ai-message td {
             border: 1px solid var(--border-main);
@@ -158,11 +164,10 @@
             vertical-align: top;
         }
         .ai-message th {
-            background-color: var(--color-ai); /* 使用 AI 消息背景色 */
+            background-color: var(--color-ai); 
             font-weight: 600;
             color: var(--text-header);
         }
-        /* 表格样式结束 */
 
         /* 输入区域样式 */
         .input-area { display: flex; padding: 16px 24px; border-top: 1px solid var(--border-main); background-color: var(--bg-card); align-items: center; gap: 10px; flex-shrink: 0; }
@@ -173,7 +178,7 @@
         #sendButton:hover { background-color: #1565c0; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); }
         #sendButton:disabled { background-color: #dadce0; cursor: not-allowed; }
         
-        /* V5.12 动态哨兵 CSS */
+        /* 动态哨兵 CSS */
         #scrollSentinel {
             min-height: 1px;
             flex-shrink: 0;
@@ -204,8 +209,8 @@
         const newChatButton = document.getElementById('newChatIcon'); 
         const scrollSentinel = document.getElementById('scrollSentinel');
         
-        const pageTitleElement = document.getElementById('pageTitle'); // 获取新的标题元素
-        const appTitleDisplayElement = document.getElementById('appTitleDisplay'); // 获取聊天头部标题元素
+        const pageTitleElement = document.getElementById('pageTitle'); 
+        const appTitleDisplayElement = document.getElementById('appTitleDisplay'); 
         
         // --- 【全局状态】用于打断功能 ---
         let currentAbortController = null; 
@@ -215,6 +220,7 @@
         // --- V5.12 新增函数：动态更新哨兵高度 (保持不变) ---
         function updateSentinelHeight() {
             const chatBoxHeight = chatBox.clientHeight;
+            // 确保哨兵高度足够，允许用户向下滚动
             scrollSentinel.style.height = (chatBoxHeight + 10) + 'px';
         }
 
@@ -224,7 +230,7 @@
             typingTimerIds = [];
         }
         
-        // --- 🚀 V6.7 核心改动：辅助函数：Markdown 渲染 (增强换行清理逻辑) ---
+        // --- 🚀 V6.8 核心改动：辅助函数：Markdown 渲染 (增强换行清理逻辑) ---
         function renderMarkdown(text) {
             let htmlText = text;
 
@@ -239,7 +245,7 @@
             const lines = htmlText.split('\n');
             let outputLines = [];
             let inTable = false;
-            let headerCells = 0; // 用于验证分隔线和内容行
+            let headerCells = 0; 
 
             for (let i = 0; i < lines.length; i++) {
                 const line = lines[i].trim();
@@ -251,14 +257,11 @@
                     // 发现表格头和分隔符：| Header | Header | \n |---|---|
                     const headerLine = lines[i];
                     
-                    // 开启表格结构
                     outputLines.push('<table><thead><tr>');
                     
-                    // 解析 Header 行，注意：split('|') 会在首尾产生空字符串，故使用 slice(1, -1)
                     const headers = headerLine.split('|').slice(1, -1);
                     headerCells = headers.length;
                     
-                    // 渲染表头
                     headers.forEach(header => {
                         outputLines.push(`<th>${header.trim()}</th>`);
                     });
@@ -271,7 +274,6 @@
                     // 表格内容行
                     const cells = line.split('|').slice(1, -1);
                     
-                    // 简单的列数校验，防止意外换行或数据错误导致表格错乱
                     if (cells.length === headerCells) {
                         outputLines.push('<tr>');
                         cells.forEach(cell => {
@@ -279,7 +281,6 @@
                         });
                         outputLines.push('</tr>');
                     } else {
-                        // 列数不匹配，结束表格并处理为普通行
                         outputLines.push('</tbody></table>');
                         inTable = false;
                         outputLines.push(line);
@@ -322,29 +323,25 @@
             
             // 4. 清理和压缩换行符
             
-            // 1. 将连续三个或更多的 \n 压缩成两个 \n (确保段落间有且仅有一个空行)
+            // 🚀 V6.8 核心改动：先对块级元素前后的空白和换行进行**贪婪**清理
+            // 目标是移除紧接在块级元素（<table>, <pre>, <ul>）前后的所有空白和换行符。
+            htmlText = htmlText.replace(/\s*(<pre|<ul>|<table>)/gi, '$1');
+            htmlText = htmlText.replace(/(<\/pre>|<\/ul>|<\/table>)\s*/gi, '$1');
+
+
+            // 5. 替换 \n 为 <br>
+            // 此时剩下的 \n 应该只是段落之间的间隔，或是普通的行内换行
+            // 5.1. 将连续三个或更多的 \n 压缩成两个 \n (确保段落间有且仅有一个空行)
             htmlText = htmlText.replace(/\n{3,}/g, '\n\n'); 
+            // 5.2. 替换最后的 \n 为 <br>
+            htmlText = htmlText.replace(/\n/g, '<br>');
             
-            // 2. 删除块级元素（如表格/代码块/列表）前后的多余换行符/空格
-            // 清理代码块
-            htmlText = htmlText.replace(/\s*<pre>/g, '<pre>');
-            htmlText = htmlText.replace(/<\/pre>\s*/g, '</pre>');
-            // 清理列表
-            htmlText = htmlText.replace(/\s*<ul>/g, '<ul>');
-            htmlText = htmlText.replace(/<\/ul>\s*/g, '</ul>');
-            
-            // 🚀 V6.7 增强：对表格进行更严格的清理，解决表格上方空行问题
-            htmlText = htmlText.replace(/\s*<table>/g, '<table>'); // 删除表格前的 \n 或空格
-            htmlText = htmlText.replace(/<\/table>\s*/g, '</table>'); // 删除表格后的 \n 或空格
-            
-            // 🚀 V6.7 增强：清理表格和代码块前后的 <br> 标签 (因为它们会产生于 \n 被替换后)
-            // 目标是移除紧接在 <table> 或 <pre> 标签前的 <br>
+
+            // 6. 清理可能残余在块级元素前后的 <br> (预防性清理)
             htmlText = htmlText.replace(/<br>\s*(<pre|<ul>|<table>)/gi, '$1');
             htmlText = htmlText.replace(/(<\/pre>|<\/ul>|<\/table>)\s*<br>/gi, '$1');
 
-
-            // 5. 替换最后的换行符为 <br>
-            return htmlText.replace(/\n/g, '<br>');
+            return htmlText;
         }
         // --- Markdown 渲染函数修改结束 ---
 
@@ -423,15 +420,20 @@
             typeWelcome();
         }
 
-        // --- fetchConfig (保持不变) ---
+        // --- fetchConfig (加固错误处理) ---
         async function fetchConfig() {
             updateSentinelHeight();
             
             try {
                 const response = await fetch('/api/admin'); 
+                let config = {};
                 
                 if (response.ok) {
-                    const config = await response.json();
+                    try {
+                        config = await response.json();
+                    } catch (e) {
+                        console.warn("Could not parse config JSON, using defaults.");
+                    }
                     
                     const defaultAppTitle = 'AI 助手';
                     const appTitle = config.appTitle || defaultAppTitle;
@@ -451,12 +453,18 @@
                     appendMessage('ai', '呵，又来了？连个配置都连不上。');
                 }
             } catch (error) {
-                appendMessage('system', '网络错误，懒得跟你解释。');
+                // 如果是网络连接错误，显示系统消息
+                if (error.message.includes('Failed to fetch')) {
+                     appendMessage('system', '网络错误，懒得跟你解释。');
+                } else {
+                    console.error('Config Fetch Error:', error);
+                }
             }
         }
         
-        // --- startNewChat (保持不变) ---
+        // --- startNewChat (Bug 修复和加固) ---
         async function startNewChat() {
+            // 🚀 V6.8 修复：确保点击事件被捕获并执行
             if (!confirm("确定要开启新的聊天吗？当前对话记录将被清空。")) {
                 return;
             }
@@ -467,15 +475,19 @@
                     currentAbortController.abort();
                 }
 
+                // 发送请求给后端清除历史记录
                 const response = await fetch('/api/new_chat', { method: 'POST' });
                 
                 if (response.ok) {
+                    // 清除成功后刷新页面
                     window.location.reload();
                 } else {
-                    alert('清除历史失败，请检查网络或后端配置。');
+                    // 如果后端返回状态码非 200/OK
+                    alert('清除历史失败，请检查后端 /api/new_chat 接口是否配置。');
                 }
             } catch (error) {
-                alert('网络错误，无法连接到清除会话接口。');
+                // 如果是网络连接错误
+                alert('网络连接失败，无法连接到清除会话接口。请检查后端服务是否运行。');
                 console.error('New Chat Error:', error);
             }
         }
@@ -552,6 +564,7 @@
             messageInput.placeholder = 'AI 正在思考...';
             
             updateSentinelHeight();
+            // 平滑滚动到用户消息的顶部，确保输入框不被遮挡
             userMessageDiv.scrollIntoView({ block: 'start', behavior: 'smooth' });
             
             currentAbortController = new AbortController();
@@ -575,6 +588,7 @@
             }
         });
 
+        // 🚀 V6.8 修复：确保新建聊天按钮的点击事件生效
         newChatButton.addEventListener('click', startNewChat);
 
         document.addEventListener('DOMContentLoaded', fetchConfig);
