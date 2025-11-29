@@ -100,8 +100,8 @@
         .chat-box { 
             flex-grow: 1; 
             padding: 20px 24px; 
-            /* 🚀 V6.9 修复 2：调整 padding-bottom，确保底部留白统一 */
-            padding-bottom: 30px; /* 确保最后一个气泡和输入框上方有 20px 左右的间距 */
+            /* 底部冗余空间：保留 24px 确保最后一个气泡和输入框上方有 24px 间距 */
+            padding-bottom: 24px; 
             
             overflow-y: auto; 
             display: flex; 
@@ -118,7 +118,8 @@
             line-height: 1.6; 
             word-wrap: break-word; 
             font-size: 0.95em; 
-            scroll-margin-top: 20px;
+            /* 锚定点：当滚动到 message 时，在其上方留出 20px 间隙 */
+            scroll-margin-top: 20px; 
         }
 
         .user-message { align-self: flex-end; background-color: var(--color-user); }
@@ -149,11 +150,11 @@
         .ai-message ul { padding-left: 20px; margin-top: 5px; margin-bottom: 5px; list-style: disc; }
         .ai-message strong { font-weight: 700; }
 
-        /* 表格样式：V6.9 调整，移除所有外边距和内边距，让下面的 .typing-mode 来控制 */
+        /* 表格样式：V7.0 调整，设置统一外边距 */
         .ai-message table {
             border-collapse: collapse; 
-            margin: 0; /* 默认移除 margin */
-            padding: 0; /* 默认移除 padding */
+            margin: 10px 0; /* 统一设置上下边距 */
+            padding: 0; 
             max-width: 100%;
             overflow-x: auto; 
             display: block; 
@@ -170,20 +171,14 @@
             color: var(--text-header);
         }
 
-        /* 🚀 V6.9 修复 1 关键：打字机模式临时 CSS 修正 */
-        .ai-message.typing-mode table {
-            /* 在打字过程中，表格上方的 <br> 会导致空行。我们强制将表格紧贴前一个元素。 */
-            margin-top: -16px !important; 
+        /* 🚀 V7.0 恢复：哨兵模式 CSS */
+        #scrollSentinel {
+            min-height: 1px;
+            flex-shrink: 0;
+            visibility: hidden; 
+            /* V7.0 关键：将其作为第一个元素，确保聊天记录能完全滚动到顶部 */
         }
-        /* 强制移除 <br> 在打字模式下的默认 margin/spacing，以减少表格前的空行 */
-        .ai-message.typing-mode br {
-            line-height: 0;
-            display: block;
-            margin: 0;
-            padding: 0;
-            height: 0;
-        }
-        /* 当打字完成后，在 startTyping 的 resolve 中移除 .typing-mode 即可恢复正常排版 */
+
 
         /* 输入区域样式 */
         .input-area { display: flex; padding: 16px 24px; border-top: 1px solid var(--border-main); background-color: var(--bg-card); align-items: center; gap: 10px; flex-shrink: 0; }
@@ -193,8 +188,6 @@
         #sendButton { padding: 12px 20px; background-color: var(--color-brand-blue); color: white; border: none; border-radius: 24px; cursor: pointer; font-size: 1em; transition: background-color 0.3s, box-shadow 0.3s; display: flex; align-items: center; justify-content: center; }
         #sendButton:hover { background-color: #1565c0; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); }
         #sendButton:disabled { background-color: #dadce0; cursor: not-allowed; }
-        
-        /* 🚀 V6.9 修复 2：移除哨兵 CSS */
     </style>
 </head>
 <body>
@@ -204,7 +197,8 @@
             <span class="header-title" id="appTitleDisplay">AI 助手</span> <span class="header-icon">✨</span>
         </div>
         <div class="chat-box" id="chatBox">
-            </div>
+            <div id="scrollSentinel"></div>
+        </div>
         <div class="input-area">
             <button id="newChatIcon" class="new-chat-icon-button">+</button>
             <input type="text" id="messageInput" placeholder="向 AI 提问..." autofocus>
@@ -217,6 +211,7 @@
         const messageInput = document.getElementById('messageInput');
         const sendButton = document.getElementById('sendButton');
         const newChatButton = document.getElementById('newChatIcon'); 
+        const scrollSentinel = document.getElementById('scrollSentinel');
         
         const pageTitleElement = document.getElementById('pageTitle'); 
         const appTitleDisplayElement = document.getElementById('appTitleDisplay'); 
@@ -226,8 +221,13 @@
         let typingTimerIds = []; 
         // ------------------------------------
 
-        // --- V6.9 移除：动态更新哨兵高度函数不再需要 ---
-        // function updateSentinelHeight() { /* ... */ }
+        // --- 🚀 V7.0 恢复：动态更新哨兵高度函数 ---
+        function updateSentinelHeight() {
+            // 确保哨兵的高度至少是 chatBox 的高度，这样第一条消息才能滚动到最顶端
+            const chatBoxHeight = chatBox.clientHeight;
+            // 额外加上 10px 确保有足够的拉伸空间
+            scrollSentinel.style.height = (chatBoxHeight + 10) + 'px'; 
+        }
 
         // --- 中断动画函数 (保持不变) ---
         function stopAllTyping() {
@@ -235,7 +235,7 @@
             typingTimerIds = [];
         }
         
-        // --- 核心改动：辅助函数：Markdown 渲染 ---
+        // --- 🚀 V7.0 核心改动：辅助函数：Markdown 渲染 (最终表格空白修复) ---
         function renderMarkdown(text) {
             let htmlText = text;
 
@@ -270,7 +270,7 @@
 
                     outputLines.push('</tr></thead><tbody>');
                     inTable = true;
-                    i++; // 跳过分隔行
+                    i++; 
                     continue;
                 } else if (inTable && line.match(/^\|.*?\|$/)) {
                     // 表格内容行
@@ -323,10 +323,13 @@
             
             // 4. 清理和压缩换行符
             
-            // 核心清理：先对块级元素前后的空白和换行进行**贪婪**清理 (解决解析器在块级元素前后添加额外换行的问题)
+            // 4.1 核心清理：先对块级元素前后的空白和换行进行**贪婪**清理 
             htmlText = htmlText.replace(/\s*(<pre|<ul>|<table>)/gi, '$1');
             htmlText = htmlText.replace(/(<\/pre>|<\/ul>|<\/table>)\s*/gi, '$1');
 
+            // 🚀 V7.0 最终表格修复：移除紧挨在 <table> 前面的所有换行符（\n）
+            // 这是为了确保即使在打字机效果中，表格前也不会因为 \n 转换成 <br> 而出现空行
+            htmlText = htmlText.replace(/\n*<table>/gi, '<table>');
 
             // 5. 替换 \n 为 <br>
             htmlText = htmlText.replace(/\n{3,}/g, '\n\n'); 
@@ -341,7 +344,7 @@
         }
         // --- Markdown 渲染函数修改结束 ---
 
-        // --- 核心功能函数：appendMessage (V6.9 调整) ---
+        // --- 核心功能函数：appendMessage (V7.0 调整) ---
         function appendMessage(sender, text) {
             const messageDiv = document.createElement('div');
             messageDiv.classList.add('message');
@@ -350,7 +353,7 @@
                 messageDiv.classList.add('user-message');
                 messageDiv.textContent = text; 
             } else {
-                messageDiv.classList.add('ai-message'); /* 系统消息也先添加 ai-message，但会覆盖为 system-message */
+                messageDiv.classList.add('ai-message'); 
                 messageDiv.innerHTML = text;
                 
                 if (sender === 'system') {
@@ -359,7 +362,7 @@
                 }
             }
             
-            // 🚀 V6.9 修复 2：直接添加到 chatBox 底部
+            // 🚀 V7.0：添加到 chatBox 底部
             chatBox.appendChild(messageDiv);
             
             // 滚动到底部
@@ -368,10 +371,8 @@
             return messageDiv;
         }
         
-        // --- 打字机效果函数 (V6.9 关键修复) ---
+        // --- 打字机效果函数 (V7.0 调整) ---
         function startTyping(messageElement, rawText, delay = 1) { 
-            // 🚀 V6.9 修复 1 关键：在打字开始时添加临时样式
-            messageElement.classList.add('typing-mode');
             
             return new Promise(resolve => {
                 let i = 0;
@@ -381,6 +382,8 @@
                     if (i < rawText.length) {
                         try {
                             const currentText = rawText.substring(0, i + 1);
+                            
+                            // V7.0：不再需要临时样式，因为 Markdown 渲染器已从根本上清除了表格前的 \n
                             messageElement.innerHTML = renderMarkdown(currentText) + cursor;
                             
                             // 保持滚动到底部
@@ -392,14 +395,10 @@
                         } catch (e) {
                             console.error("Typing rendering error:", e);
                             messageElement.innerHTML = renderMarkdown(rawText);
-                            // 🚀 V6.9 修复 1：打字错误或完成时，移除临时样式
-                            messageElement.classList.remove('typing-mode');
                             resolve(); 
                         }
                     } else {
                         messageElement.innerHTML = renderMarkdown(rawText);
-                        // 🚀 V6.9 修复 1：打字完成时，移除临时样式
-                        messageElement.classList.remove('typing-mode');
                         resolve();
                     }
                 }
@@ -408,11 +407,8 @@
             });
         }
         
-        // --- 欢迎语的异步处理 (V6.9 调整) ---
+        // --- 欢迎语的异步处理 (V7.0 调整) ---
         function displayWelcomeMessage(welcomeMessageDiv, welcomeText) {
-            // 🚀 V6.9 修复 1：为欢迎语添加打字模式，确保表格正常渲染
-            welcomeMessageDiv.classList.add('typing-mode');
-            
             let i = 0;
             const delay = 2; 
             const cursor = '<span style="opacity: 0.8; margin-left: 2px; color: var(--text-main);">▋</span>'; 
@@ -427,19 +423,18 @@
                     } catch (e) {
                         console.error("Welcome message typing error, falling back:", e);
                         welcomeMessageDiv.innerHTML = renderMarkdown(welcomeText);
-                        welcomeMessageDiv.classList.remove('typing-mode');
                     }
                 } else {
                     welcomeMessageDiv.innerHTML = renderMarkdown(welcomeText);
-                    welcomeMessageDiv.classList.remove('typing-mode');
                 }
             }
             typeWelcome();
         }
 
-        // --- fetchConfig (保持不变) ---
+        // --- fetchConfig (V7.0 恢复 updateSentinelHeight) ---
         async function fetchConfig() {
-            // V6.9 移除：updateSentinelHeight() 不再需要
+            // 🚀 V7.0 恢复：初始化时设置哨兵高度
+            updateSentinelHeight();
             
             try {
                 const response = await fetch('/api/admin'); 
@@ -462,7 +457,6 @@
                     
                     const welcomeMessageDiv = document.createElement('div');
                     welcomeMessageDiv.classList.add('message', 'ai-message');
-                    // 🚀 V6.9 修复 2：直接添加到 chatBox 底部
                     chatBox.appendChild(welcomeMessageDiv); 
                     
                     displayWelcomeMessage(welcomeMessageDiv, welcomeText);
@@ -554,7 +548,7 @@
             }
         }
 
-        // --- 核心功能函数：sendMessage (V6.9 调整) ---
+        // --- 核心功能函数：sendMessage (V7.0 调整) ---
         async function sendMessage() {
             const message = messageInput.value.trim();
             if (message === '') return;
@@ -575,7 +569,7 @@
             sendButton.disabled = true;
             messageInput.placeholder = 'AI 正在思考...';
             
-            // 滚动到用户消息的顶部，确保输入框不被遮挡
+            // 确保用户消息显示后，滚动到视图顶部（因为哨兵在顶部）
             userMessageDiv.scrollIntoView({ block: 'start', behavior: 'smooth' });
             
             currentAbortController = new AbortController();
@@ -583,14 +577,13 @@
             setTimeout(() => {
                 const aiMessageDiv = document.createElement('div');
                 aiMessageDiv.classList.add('message', 'ai-message', 'ai-thinking'); 
-                // 🚀 V6.9 修复 2：直接添加到 chatBox 底部
                 chatBox.appendChild(aiMessageDiv); 
                 
                 handleApiChat(aiMessageDiv, finalMessage, currentAbortController.signal);
             }, 50);
         }
 
-        // --- 事件监听器 (保持不变) ---
+        // --- 事件监听器 (V7.0 恢复 resize 监听) ---
         sendButton.addEventListener('click', sendMessage);
         
         messageInput.addEventListener('keydown', function(event) {
@@ -603,7 +596,8 @@
         newChatButton.addEventListener('click', startNewChat);
 
         document.addEventListener('DOMContentLoaded', fetchConfig);
-        // V6.9 移除：window.addEventListener('resize', updateSentinelHeight); 不再需要
+        // 🚀 V7.0 恢复：窗口大小变化时更新哨兵高度
+        window.addEventListener('resize', updateSentinelHeight);
     </script>
 </body>
 </html>
