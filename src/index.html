@@ -106,7 +106,7 @@
             position: relative;
         }
 
-        /* 🚀 V7.8 标题呼吸动画 (保持不变) */
+        /* 🚀 V7.8 标题呼吸动画 */
         /* 标题文字样式 */
         .header-title { 
             font-weight: 500; 
@@ -114,7 +114,7 @@
             transition: color 0.2s;
         }
 
-        /* 🚀 V7.8 新增：标题文字呼吸动画 (保持不变) */
+        /* 🚀 V7.8 新增：标题文字呼吸动画 */
         @keyframes breathe-text {
             0% { 
                 opacity: 1;
@@ -149,7 +149,7 @@
             white-space: nowrap;
         }
 
-        /* 欢迎语消失动画 (保持不变) */
+        /* 欢迎语消失动画 */
         @keyframes fade-out {
             0% { opacity: 0.7; }
             100% { opacity: 0; visibility: hidden; }
@@ -159,7 +159,7 @@
         }
 
 
-        /* V6.2 精简新聊天图标按钮样式 (保持不变) */
+        /* V6.2 精简新聊天图标按钮样式 */
         .input-area .new-chat-icon-button {
             background: none;
             color: var(--text-main);
@@ -193,7 +193,7 @@
             -webkit-overflow-scrolling: touch; 
         }
 
-        /* 消息样式 (保持不变) */
+        /* 消息样式 */
         .message { 
             padding: 12px 18px; 
             border-radius: 20px; 
@@ -208,14 +208,14 @@
         .ai-message { align-self: flex-start; background-color: var(--color-ai); }
         .system-message { align-self: center; background-color: var(--color-system-bg); color: var(--color-system-text); font-size: 0.85em; text-align: center; padding: 8px 12px; border-radius: 12px; max-width: 60%; }
 
-        /* --- 呼吸动画效果 (保持不变) --- */
+        /* --- 呼吸动画效果 --- */
         @keyframes breathe-border {
             0%, 100% { box-shadow: 0 0 0 0px rgba(var(--color-brand-blue-rgb), 0.5); }
             50% { box-shadow: 0 0 0 3px rgba(var(--color-brand-blue-rgb), 0.8); }
         }
         .ai-thinking { border: 1px solid var(--color-brand-blue); box-sizing: border-box; animation: breathe-border 1.5s infinite ease-in-out; padding: 11px 17px; }
 
-        /* === 回弹动画效果 (保持不变) === */
+        /* === 回弹动画效果 === */
         @keyframes bounce-message {
             0% { transform: scale(1); box-shadow: none; }
             20% { transform: scale(1.01); }
@@ -227,14 +227,14 @@
             animation: bounce-message 0.8s ease-out 1; 
         }
 
-        /* --- Markdown 样式 (保持不变) --- */
+        /* --- Markdown 样式 --- */
         .ai-message pre { background-color: var(--color-code-bg); padding: 10px; border-radius: 8px; overflow-x: auto; margin-top: 10px; font-family: Consolas, Monaco, 'Courier New', monospace; font-size: 0.9em; white-space: pre-wrap; }
         .ai-message pre code { display: block; padding-left: 0; }
         .ai-message h2 { font-size: 1.2em; font-weight: 600; margin-top: 15px; margin-bottom: 5px; color: var(--color-brand-blue); }
         .ai-message ul { padding-left: 20px; margin-top: 5px; margin-bottom: 5px; list-style: disc; }
         .ai-message strong { font-weight: 700; }
 
-        /* 🚀 V6.5 新增：Markdown 表格样式 (保持不变) */
+        /* 🚀 V6.5 新增：Markdown 表格样式 */
         .ai-message table {
             border-collapse: collapse; 
             margin: 15px 0;
@@ -263,7 +263,7 @@
         #sendButton:hover { background-color: #1565c0; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); }
         #sendButton:disabled { background-color: #dadce0; cursor: not-allowed; }
 
-        /* V5.12 动态哨兵 CSS (保持不变) */
+        /* V5.12 动态哨兵 CSS */
         #scrollSentinel {
             min-height: 1px;
             flex-shrink: 0;
@@ -694,6 +694,7 @@
                 const data = await response.json();
 
                 if (response.ok) {
+                    // 请注意：这里假设 data.candidates?.[0]?.content?.parts?.[0]?.text 是 Gemini API 的标准响应路径。
                     const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || '抱歉，AI 返回了空响应。';
 
                     await startTyping(aiMessageDiv, aiText); 
@@ -749,8 +750,8 @@
             sendButton.disabled = true;
             messageInput.placeholder = 'AI 正在思考...';
 
-            updateSentinelHeight();
-            userMessageDiv.scrollIntoView({ block: 'start', behavior: 'smooth' });
+            updateSentinelHeight(); // 开启哨兵并更新高度
+            userMessageDiv.scrollIntoView({ block: 'start', behavior: 'smooth' }); // 将用户消息滚动到顶部
 
             currentAbortController = new AbortController();
 
