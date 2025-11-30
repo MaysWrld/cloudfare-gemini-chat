@@ -446,7 +446,7 @@
             typingTimerIds = [];
         }
         
-        // --- 辅助函数：Markdown 渲染 (V9.9 修正: 增加起始行清理) ---
+        // --- 辅助函数：Markdown 渲染 (V10.0 最终修正：解决表格前空行) ---
         function renderMarkdown(text) {
             let htmlText = text;
 
@@ -464,18 +464,25 @@
                 return `<pre><code>${language}${escapedCode}</code></pre>`;
             });
 
-            // 2. 表格解析
+            // 2. 表格解析 (V10.0 增强优化：解决表格前后的空行问题)
             const lines = htmlText.split('\n');
             let outputLines = [];
             let inTable = false;
             let headerCells = 0; 
-
+            
             for (let i = 0; i < lines.length; i++) {
-                const line = lines[i].trim();
-                
-                const isSeparator = line.match(/^\|[ \t]*([: \-]*?\|)+[ \t]*$/);
+                let line = lines[i];
+                const trimmedLine = line.trim();
 
-                if (!inTable && line.match(/^\|.*?\|$/) && i + 1 < lines.length && lines[i+1].trim().match(/^\|[ \t]*([: \-]*?\|)+[ \t]*$/)) {
+                // 核心优化 1: 跳过表格和代码块以外的所有空行，避免冗余换行符
+                if (!inTable && trimmedLine === '') {
+                    continue; 
+                }
+
+                // 表格开始检测: 检查当前行是表格头，且下一行是分隔线
+                if (!inTable && trimmedLine.startsWith('|') && trimmedLine.endsWith('|') && 
+                    i + 1 < lines.length && lines[i+1].trim().match(/^\|[ \t]*([: \-]*?\|)+[ \t]*$/)) {
+                    
                     const headerLine = lines[i];
                     outputLines.push('<table><thead><tr>');
                     const headers = headerLine.split('|').slice(1, -1);
@@ -487,10 +494,13 @@
 
                     outputLines.push('</tr></thead><tbody>');
                     inTable = true;
-                    i++; 
+                    i++; // 跳过分隔线
                     continue;
-                } else if (inTable && line.match(/^\|.*?\|$/)) {
-                    const cells = line.split('|').slice(1, -1);
+                } 
+                
+                // 表格内容检测
+                else if (inTable && trimmedLine.startsWith('|') && trimmedLine.endsWith('|')) {
+                    const cells = trimmedLine.split('|').slice(1, -1);
                     
                     if (cells.length === headerCells) {
                         outputLines.push('<tr>');
@@ -499,24 +509,36 @@
                         });
                         outputLines.push('</tr>');
                     } else {
+                        // 列数不匹配，表格结束
                         outputLines.push('</tbody></table>');
                         inTable = false;
-                        outputLines.push(line);
+                        // 处理表格后的内容（如果当前行不是空行）
+                        if (trimmedLine !== '') {
+                            outputLines.push(trimmedLine);
+                        }
                     }
                     continue;
-                } else if (inTable && line === '') {
+                } 
+                
+                // 表格结束检测：遇到非表格格式行
+                else if (inTable) {
                     outputLines.push('</tbody></table>');
                     inTable = false;
+                    
+                    // 核心优化 2: 如果当前行非空，则作为普通内容添加
+                    if (trimmedLine !== '') {
+                        outputLines.push(trimmedLine);
+                    }
                     continue;
-                } else if (inTable) {
-                    outputLines.push('</tbody></table>');
-                    inTable = false;
-                    outputLines.push(line);
-                } else {
+                } 
+                
+                // 普通内容添加
+                else {
                     outputLines.push(line);
                 }
             }
-            
+
+            // 表格在文件末尾结束
             if (inTable) {
                 outputLines.push('</tbody></table>');
             }
@@ -560,7 +582,7 @@
         }
         
         // --- 打字机效果函数 (V9.9 优化: 默认速度更快，改为 0ms) ---
-        function startTyping(messageElement, rawText, delay = 0) { // 🚀 修改 delay = 0
+        function startTyping(messageElement, rawText, delay = 0) { // 🚀 速度优化：delay = 0
             return new Promise(resolve => {
                 let i = 0;
                 const cursor = '<span style="opacity: 0.8; margin-left: 2px; color: var(--text-main);">▋</span>'; 
