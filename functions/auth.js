@@ -1,4 +1,4 @@
-// /functions/auth.js - 最终完整代码 (新增 Google Search Keys 读取)
+// /functions/auth.js - 最终完整代码 (新增 Google Search Keys 读取和 Tool 指令)
 
 const CONFIG_KEY = 'global_settings';
 const ADMIN_COOKIE_NAME = 'admin_logged_in';
@@ -49,8 +49,8 @@ export async function getConfig(env) {
         }
     }
     
-    // 🚀 核心：启用 Tool Calling 的 System Instruction
-    const defaultPersonaPrompt = "你现在是一个多功能AI助手，具备调用外部工具获取信息和图片的能力。当需要提供图片时，请调用 `search_image` 工具来获取互联网上公开可访问的图片URL。工具调用成功后，你必须将返回的URL严格包装在 <IMAGE_URL: [图片URL], [图片描述]> 格式的文本标记中。";
+    // 🚀 核心：启用 Tool Calling 的 System Instruction (新增网页搜索)
+    const defaultPersonaPrompt = "你现在是一个多功能AI助手，具备调用外部工具获取信息和图片的能力。当需要搜索最新事实或信息时，请调用 `search_web` 工具。当需要提供图片时，请调用 `search_image` 工具来获取互联网上公开可访问的图片URL。工具调用成功后，你必须将返回的URL严格包装在 <IMAGE_URL: [图片URL], [图片描述]> 格式的文本标记中。";
 
     // 确保所有字段都优先使用 KV 读取的值 (kvConfig)
     return {
