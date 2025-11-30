@@ -1,11 +1,11 @@
-// /functions/api/chat.js - 最终完整代码 (启用 Tool Calling: 图片搜索 + 网页搜索, 🚀 新增代理支持)
+// /functions/api/chat.js - 最终完整代码 (启用 Tool Calling: 图片搜索 + 网页搜索, 🚀 修正代理路径)
 
 import { isAuthenticated, getConfig } from '../auth';
 import { getHistory, saveHistory } from '../history';
 
-// 🚀 定义代理地址
-// 注意：这个地址需要完整地代理 Google Custom Search API 的基础路径
-const GOOGLE_PROXY_BASE_URL = 'https://google.400123456.xyz/customsearch/v1'; 
+// 🚀 修正：定义代理地址为基础域名
+// 我们假设代理服务器只需要根域名，路径由下面的函数手动拼接。
+const GOOGLE_PROXY_BASE_URL = 'https://google.400123456.xyz/'; 
 
 // ---------------------- 1. Tool 定义 (保持不变) ----------------------
 
@@ -179,7 +179,7 @@ export async function onRequest({ request, env }) {
 }
 
 
-// ---------------------- 🚀 5. Tool 执行函数 (修改 URL) ----------------------
+// ---------------------- 🚀 5. Tool 执行函数 (手动拼接代理 URL) ----------------------
 
 /**
  * 执行图片搜索
@@ -194,8 +194,10 @@ async function executeImageSearch(query, config) {
         return null; 
     }
 
-    // 🚀 关键修改：使用代理地址 GOOGLE_PROXY_BASE_URL
-    const searchUrl = `${GOOGLE_PROXY_BASE_URL}?key=${API_KEY}&cx=${CX_ID}&q=${encodeURIComponent(query)}&searchType=image&num=1`;
+    // 🚀 关键修正：手动拼接 /customsearch/v1 到代理根路径
+    const path = `customsearch/v1?key=${API_KEY}&cx=${CX_ID}&q=${encodeURIComponent(query)}&searchType=image&num=1`;
+    // 确保 URL 拼接正确，无论是 GOOGLE_PROXY_BASE_URL 结尾有没有 '/'
+    const searchUrl = GOOGLE_PROXY_BASE_URL.endsWith('/') ? GOOGLE_PROXY_BASE_URL + path : GOOGLE_PROXY_BASE_URL + '/' + path;
 
     try {
         const response = await fetch(searchUrl);
@@ -225,8 +227,9 @@ async function executeWebSearch(query, config) {
         return null; 
     }
 
-    // 🚀 关键修改：使用代理地址 GOOGLE_PROXY_BASE_URL
-    const searchUrl = `${GOOGLE_PROXY_BASE_URL}?key=${API_KEY}&cx=${CX_ID}&q=${encodeURIComponent(query)}&num=3`;
+    // 🚀 关键修正：手动拼接 /customsearch/v1 到代理根路径
+    const path = `customsearch/v1?key=${API_KEY}&cx=${CX_ID}&q=${encodeURIComponent(query)}&num=3`;
+    const searchUrl = GOOGLE_PROXY_BASE_URL.endsWith('/') ? GOOGLE_PROXY_BASE_URL + path : GOOGLE_PROXY_BASE_URL + '/' + path;
 
     try {
         const response = await fetch(searchUrl);
