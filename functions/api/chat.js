@@ -26,10 +26,6 @@ function generateUuid() {
 
 /**
  * 辅助函数：将历史消息转换为 Gemini API 格式
- * @param {Array} history 
- * @param {Array<Object>} userContents // 传入完整的用户消息结构，可能包含图片
- * @param {string} personaPrompt
- * @returns {Array<Object>}
  */
 function buildGeminiContents(history, userContents, personaPrompt) {
     const contents = [];
@@ -50,7 +46,6 @@ function buildGeminiContents(history, userContents, personaPrompt) {
     // 历史消息部分 (最多 MAX_HISTORY_MESSAGES 轮对话)
     const historyToUse = history.slice(-MAX_HISTORY_MESSAGES);
     
-    // 历史消息现在必须直接使用存储的 parts 结构
     for (const msg of historyToUse) {
         contents.push({
             role: msg.role === 'user' ? 'user' : 'model', 
@@ -79,27 +74,32 @@ export async function onRequest({ request, env }) {
     }
 
     try {
+        // ------------------ 🚨 重点排查 1：CONFIG KV 绑定 ------------------
+        if (!env.CONFIG) {
+             return new Response(JSON.stringify({ error: '配置错误：KV 命名空间 "CONFIG" 未绑定。请检查 Pages/Worker 设置。' }), { status: 500 });
+        }
+        
         const body = await request.json();
         
-        // userContents 现在是完整的 Gemini 格式的数组，可能包含图片 parts
         const userContents = body.contents;
         
-        // 提取当前用户消息的文本部分和完整的 parts 结构，用于历史记录存储
         const lastUserContent = userContents[userContents.length - 1];
-        const userMessageText = lastUserContent.parts.find(p => p.text)?.text || ''; 
         const currentUserParts = lastUserContent.parts;
 
         const config = await getConfig(env);
 
         if (!config.apiKey || !config.apiUrl) {
-            return new Response(JSON.stringify({ error: 'AI API Key 或 URL 未配置。请联系管理员。' }), { status: 500 });
+            return new Response(JSON.stringify({ error: 'AI API Key 或 URL 未配置。请访问管理后台配置。' }), { status: 500 });
         }
         
-        // 历史记录现在需要存储完整的 parts 结构
+        // ------------------ 🚨 重点排查 2：HISTORY KV 绑定 ------------------
+        if (!env.HISTORY) {
+             return new Response(JSON.stringify({ error: '配置错误：KV 命名空间 "HISTORY" 未绑定。请检查 Pages/Worker 设置。' }), { status: 500 });
+        }
+
         const historyData = await env.HISTORY.get(sessionId, { type: 'json' });
         const history = Array.isArray(historyData) ? historyData : [];
         
-        // 将完整的 userContents 传给 buildGeminiContents
         const geminiContents = buildGeminiContents(history, userContents, config.personaPrompt);
 
         // ------------------ 配置对象 ------------------
@@ -109,7 +109,6 @@ export async function onRequest({ request, env }) {
             temperature: parseFloat(config.temperature) || 0.7, 
         };
         
-        // 📌 核心：没有 tools 和 toolConfig 字段
         const geminiRequestBody = {
             contents: geminiContents,
             generationConfig: generationConfig, 
@@ -137,7 +136,6 @@ export async function onRequest({ request, env }) {
         
         // ------------------ 6. 更新历史记录 ------------------
         
-        // 正常文本清理逻辑
         let aiParts = data.candidates?.[0]?.content?.parts;
         let aiText = aiParts?.find(p => p.text)?.text; // 查找文本部分
         
@@ -147,14 +145,11 @@ export async function onRequest({ request, env }) {
              if (textPart) textPart.text = aiText; 
         }
 
-        // 获取 AI 返回的完整 parts 结构
         const aiPartsToSave = data.candidates?.[0]?.content?.parts || [{ text: aiText || '' }];
 
         const newHistory = [
             ...history,
-            // user 消息保存完整的 parts
             { role: 'user', parts: currentUserParts }, 
-            // model 消息保存完整的 parts
             { role: 'model', parts: aiPartsToSave } 
         ];
         
@@ -169,11 +164,11 @@ export async function onRequest({ request, env }) {
              headers['Set-Cookie'] = `${SESSION_COOKIE_NAME}=${sessionId}; Path=/; Max-Age=${COOKIE_TTL_SECONDS}; HttpOnly; Secure; SameSite=Strict`;
         }
 
-        // 返回包含 AI 文本（其中包含图片标记）的 data
         return new Response(JSON.stringify(data), { status: 200, headers: headers });
 
     } catch (error) {
         console.error("Chat Worker Error:", error);
+        // 如果是其他运行时错误（如JSON解析错误），也应报告
         return new Response(JSON.stringify({ error: `系统错误: ${error.message}` }), { status: 500 });
     }
 }
