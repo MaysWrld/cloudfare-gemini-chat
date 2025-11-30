@@ -85,12 +85,12 @@
     <script>
         const statusElement = document.getElementById('status');
         const form = document.getElementById('configForm');
-        const saveButton = document.querySelector('button[type="submit"]'); // 🎯 新增：获取保存按钮元素
+        const saveButton = document.querySelector('button[type="submit"]'); 
         
-        // 固定的图文功能指令，确保不被覆盖
+        // 🚀 核心修复：移除模板字符串插值，确保 [图片描述] 是字面量
         const IMAGE_FUNCTION_PROMPT = `
-            **[功能强制指令]**：当需要提供图片时，你必须在文本中严格插入以下格式的标记：<IMAGE_URL: [互联网可访问的图片URL], [图片描述]>。如果找不到合适的链接，使用占位符链接如：https://via.placeholder.com/600x400.png?text=图+${[图片描述]}。
-        `.trim();
+            **[功能强制指令]**：当需要提供图片时，你必须在文本中严格插入以下格式的标记：<IMAGE_URL: [互联网可访问的图片URL], [图片描述]>。如果找不到合适的链接，使用占位符链接如：https://via.placeholder.com/600x400.png?text=图+[图片描述]。
+        `.trim(); // 修复了 ${[图片描述]} 导致运行时错误的问题
 
         /**
          * 辅助函数：将完整的 personaPrompt 剥离出用户输入的角色部分
@@ -102,11 +102,9 @@
             const startIndex = fullPrompt.indexOf(IMAGE_FUNCTION_PROMPT);
             
             if (startIndex > -1) {
-                // 如果找到了功能指令，则返回之前的文本（并清理尾部换行）
                 return fullPrompt.substring(0, startIndex).trim();
             }
             
-            // 如果没找到功能指令，说明这是纯粹的角色指令
             return fullPrompt.trim();
         }
         
@@ -120,6 +118,16 @@
                     statusElement.textContent = '认证失败。请刷新页面重新输入凭证。';
                     return;
                 }
+                
+                // 检查 Worker 端是否返回了 KV 绑定错误
+                if (response.status === 500) {
+                     const errorData = await response.json();
+                     if (errorData.error.includes('KV 绑定错误')) {
+                        statusElement.className = 'alert alert-danger';
+                        statusElement.textContent = `❌ ${errorData.error} (请检查 Pages/Worker 的环境变量绑定)`;
+                        return;
+                    }
+                }
 
                 if (response.ok) {
                     const config = await response.json();
@@ -129,7 +137,6 @@
                     document.getElementById('welcomeMessage').value = config.welcomeMessage || '';
                     document.getElementById('appTitle').value = config.appTitle || '';
                     
-                    // 加载时，只显示用户自定义的角色指令部分
                     const currentPrompt = config.personaPrompt || '';
                     document.getElementById('personaPrompt').value = extractRolePrompt(currentPrompt);
                     
@@ -144,7 +151,7 @@
                 }
             } catch (error) {
                 statusElement.className = 'alert alert-danger';
-                statusElement.textContent = '网络请求错误。';
+                statusElement.textContent = `网络请求错误或前端解析错误: ${error.message}`;
             }
         }
 
@@ -152,7 +159,6 @@
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            // 获取用户输入的角色指令
             const userRolePrompt = document.getElementById('personaPrompt').value.trim();
             
             // 核心：将用户的角色指令和功能指令合并
@@ -185,7 +191,7 @@
                     statusElement.className = 'alert alert-success';
                     statusElement.textContent = result.message;
                     
-                    // 🚀 按钮反馈优化
+                    // 按钮反馈优化
                     const originalButtonText = saveButton.textContent;
                     saveButton.textContent = '保存成功';
                     saveButton.classList.remove('btn-success');
@@ -206,7 +212,7 @@
                 }
             } catch (error) {
                 statusElement.className = 'alert alert-danger';
-                statusElement.textContent = '保存时发生网络错误。';
+                statusElement.textContent = `保存时发生网络错误: ${error.message}`;
             }
         });
 
