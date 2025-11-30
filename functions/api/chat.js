@@ -1,4 +1,4 @@
-// /functions/api/chat.js - V9.7 修正版：新增文本清理
+// /functions/api/chat.js - V9.8 修正版：使用正则表达式彻底清理文本开头的空白行
 
 import { isAuthenticated, getConfig } from '../auth';
 
@@ -128,8 +128,9 @@ export async function onRequest({ request, env }) {
              return new Response(JSON.stringify({ error: 'AI 返回了一个空响应。' }), { status: 500 });
         }
 
-        // 💡 V9.7 修正：清理 AI 文本开头的空白行和空格，改善表格和列表渲染体验
-        aiText = aiText.trimStart(); 
+        // 💡 V9.8 修正：使用正则表达式彻底清理文本开头的空白行和空格
+        // 正则表达式 ^\s+ 匹配字符串开头（^）的一个或多个连续空白字符（\s+）
+        aiText = aiText.replace(/^\s+/, '');
         data.candidates[0].content.parts[0].text = aiText; // 更新响应数据中的文本
 
         // 6. 更新历史记录
