@@ -446,40 +446,38 @@
             typingTimerIds = [];
         }
         
-        // --- 辅助函数：Markdown 渲染 (V10.0 最终修正：解决表格前空行) ---
+        // --- 辅助函数：Markdown 渲染 (V10.2 终极修正：解决换行符过度替换) ---
         function renderMarkdown(text) {
             let htmlText = text;
 
-            // 💡 V9.9 核心修正：双重清理文本开头的空白和换行
-            // 1. 移除所有空白字符（空格、换行等），以防后端遗漏
+            // 1. 清理开头的空白
             htmlText = htmlText.replace(/^\s+/, ''); 
-            // 2. 移除 Markdown 渲染开始时，可能被误解析为 `<br>` 的换行符
             htmlText = htmlText.replace(/^[\r\n]+/, ''); 
-            // 确保经过两次清理后，htmlText 是从第一个非空白字符开始的。
 
-            // 1. 处理代码块 
+            // 2. 处理代码块 (使用占位符保护内部换行符 \n)
             htmlText = htmlText.replace(/```(\w*)\n([\s\S]*?)```/g, function(match, lang, code) {
                 const escapedCode = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
                 const language = lang ? `<span class="code-lang" style="font-size: 0.8em; color: var(--color-code-lang); display: block; margin-bottom: 5px;">${lang}</span>` : '';
-                return `<pre><code>${language}${escapedCode}</code></pre>`;
+                // 🚀 V10.2 核心: 使用占位符保护
+                return `CODEBLOCK_START${language}${escapedCode}CODEBLOCK_END`;
             });
-
-            // 2. 表格解析 (V10.0 增强优化：解决表格前后的空行问题)
+            
+            // 3. 逐行处理表格和普通内容 (V10.2 优化)
             const lines = htmlText.split('\n');
             let outputLines = [];
             let inTable = false;
             let headerCells = 0; 
-            
+
             for (let i = 0; i < lines.length; i++) {
                 let line = lines[i];
                 const trimmedLine = line.trim();
 
-                // 核心优化 1: 跳过表格和代码块以外的所有空行，避免冗余换行符
-                if (!inTable && trimmedLine === '') {
+                // 🚀 V10.2 核心修正: 彻底跳过所有空行
+                if (trimmedLine === '') {
                     continue; 
                 }
 
-                // 表格开始检测: 检查当前行是表格头，且下一行是分隔线
+                // 表格开始检测
                 if (!inTable && trimmedLine.startsWith('|') && trimmedLine.endsWith('|') && 
                     i + 1 < lines.length && lines[i+1].trim().match(/^\|[ \t]*([: \-]*?\|)+[ \t]*$/)) {
                     
@@ -512,23 +510,16 @@
                         // 列数不匹配，表格结束
                         outputLines.push('</tbody></table>');
                         inTable = false;
-                        // 处理表格后的内容（如果当前行不是空行）
-                        if (trimmedLine !== '') {
-                            outputLines.push(trimmedLine);
-                        }
+                        outputLines.push(trimmedLine);
                     }
                     continue;
                 } 
                 
-                // 表格结束检测：遇到非表格格式行
+                // 表格结束检测
                 else if (inTable) {
                     outputLines.push('</tbody></table>');
                     inTable = false;
-                    
-                    // 核心优化 2: 如果当前行非空，则作为普通内容添加
-                    if (trimmedLine !== '') {
-                        outputLines.push(trimmedLine);
-                    }
+                    outputLines.push(trimmedLine);
                     continue;
                 } 
                 
@@ -546,7 +537,7 @@
             htmlText = outputLines.join('\n');
 
 
-            // 3. 处理标题、列表和强调
+            // 4. 处理标题、列表和强调 (在合并后的文本上执行)
             htmlText = htmlText.replace(/^## (.*$)/gim, '<h2>$1</h2>');
             htmlText = htmlText.replace(/^\* (.*$)/gim, '<ul><li>$1</li></ul>');
             htmlText = htmlText.replace(/<\/li>\n<ul>/gim, '</li>'); 
@@ -555,8 +546,17 @@
             htmlText = htmlText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
             htmlText = htmlText.replace(/\*(.*?)\*/g, '<em>$1</em>');
             
-            // 4. 替换最后的换行符为 <br>
-            return htmlText.replace(/\n/g, '<br>');
+            // 5. 延迟替换：只替换普通段落中的单个换行符为 <br>
+            // 因为在步骤 3 中已经跳过了空行，这里替换的都是逻辑换行
+            htmlText = htmlText.replace(/\n/g, '<br>');
+
+            // 6. 恢复代码块
+            htmlText = htmlText.replace(/CODEBLOCK_START(.*?)CODEBLOCK_END/gs, function(match, content) {
+                // 将占位符内容恢复为 <pre><code> 结构，并将之前替换的 <br> 恢复为 \n
+                return `<pre><code>${content.replace(/<br>/g, '\n')}</code></pre>`; 
+            });
+            
+            return htmlText;
         }
         // --- Markdown 渲染函数修改结束 ---
 
