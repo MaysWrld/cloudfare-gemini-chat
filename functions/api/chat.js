@@ -1,4 +1,4 @@
-// /functions/api/chat.js - 最终完整代码 (启用 Tool Calling)
+// /functions/api/chat.js - 最终完整代码 (启用 Tool Calling: 图片搜索 + 网页搜索)
 
 import { isAuthenticated, getConfig } from '../auth';
 import { getHistory, saveHistory } from '../history';
@@ -22,6 +22,24 @@ const search_image_tool = {
     }],
 };
 
+// 🚀 新增：网页搜索工具定义
+const search_web_tool = {
+    function_declarations: [{
+        name: 'search_web',
+        description: '用于在互联网上执行常规的网页文本搜索，获取最新的信息和事实性数据。',
+        parameters: {
+            type: 'OBJECT',
+            properties: {
+                query: {
+                    type: 'STRING',
+                    description: '用于网页搜索的关键词或问题。例如: "今天的天气", "最新的科技新闻"。',
+                },
+            },
+            required: ['query'],
+        },
+    }],
+};
+
 // ---------------------- 2. Worker 请求处理 ----------------------
 
 export async function onRequest({ request, env }) {
@@ -33,24 +51,25 @@ export async function onRequest({ request, env }) {
         const config = await getConfig(env);
         const data = await request.json();
         
-        // 获取用户消息和历史记录
         const userMessage = data.message;
         const history = await getHistory(env, data.sessionId);
 
         // 构建第一次请求体
         const contents = [...history, { role: 'user', parts: [{ text: userMessage }] }];
         
+        const tools = [search_image_tool, search_web_tool]; // 🚀 启用两个工具
+        
         const body = {
             contents: contents,
             config: {
                 systemInstruction: config.personaPrompt,
                 temperature: config.temperature,
-                tools: [search_image_tool],
+                tools: tools,
             },
             model: config.modelName,
         };
 
-        let response = await fetch(`${config.apiUrl}/models/${config.modelName}:generateContent`, { // 使用完整 URL
+        let response = await fetch(`${config.apiUrl}/models/${config.modelName}:generateContent`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -63,30 +82,43 @@ export async function onRequest({ request, env }) {
 
         // ---------------------- 🚀 3. 处理 Tool Calling (多轮交互) ----------------------
         
-        if (result.candidates?.[0]?.content?.parts?.[0]?.functionCall) {
+        const firstCandidate = result.candidates?.[0];
+
+        if (firstCandidate?.content?.parts?.[0]?.functionCall) {
             
-            const functionCall = result.candidates[0].content.parts[0].functionCall;
+            const functionCall = firstCandidate.content.parts[0].functionCall;
             const functionName = functionCall.name;
+            let toolResultContent = null;
+            let query = functionCall.args.query;
 
             if (functionName === 'search_image') {
                 
-                const query = functionCall.args.query;
-                
-                // 🚨 实际调用 Google Search API，传入 config
+                // 图片搜索
                 const imageUrl = await executeImageSearch(query, config);
+                toolResultContent = {
+                    image_url: imageUrl || "未找到相关图片URL。",
+                    description: query, 
+                };
+
+            } else if (functionName === 'search_web') { // 🚀 处理网页搜索调用
                 
-                // 构建 Tool 结果返回给 AI
-                const toolResultContent = [
+                // 网页搜索
+                const searchResults = await executeWebSearch(query, config);
+                toolResultContent = {
+                    // 返回结构化的搜索结果
+                    web_results: searchResults || "未找到相关网页搜索结果。",
+                };
+            }
+            
+            if (toolResultContent) {
+                 // 构建 Tool 结果返回给 AI
+                const toolResponsePart = [
                     {
                         functionResponse: {
                             name: functionName,
                             response: {
                                 name: functionName,
-                                // 将图片URL作为 tool response content 返回给 AI
-                                content: {
-                                    image_url: imageUrl || "未找到相关图片URL。",
-                                    description: query, // 附带描述帮助AI
-                                },
+                                content: toolResultContent,
                             },
                         },
                     },
@@ -95,8 +127,8 @@ export async function onRequest({ request, env }) {
                 // 构建第二次请求内容：用户消息 -> AI调用请求 -> Worker执行结果
                 const toolContents = [
                     ...contents, 
-                    result.candidates[0].content, 
-                    { role: 'tool', parts: toolResultContent } 
+                    firstCandidate.content, 
+                    { role: 'tool', parts: toolResponsePart } 
                 ];
 
                 // 重新调用 Gemini API (带上工具结果)
@@ -105,12 +137,12 @@ export async function onRequest({ request, env }) {
                     config: {
                         systemInstruction: config.personaPrompt,
                         temperature: config.temperature,
-                        tools: [search_image_tool],
+                        tools: tools,
                     },
                     model: config.modelName,
                 };
 
-                response = await fetch(`${config.apiUrl}/models/${config.modelName}:generateContent`, { // 使用完整 URL
+                response = await fetch(`${config.apiUrl}/models/${config.modelName}:generateContent`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -128,7 +160,6 @@ export async function onRequest({ request, env }) {
         const modelResponse = result.candidates?.[0]?.content?.parts?.[0]?.text;
         
         if (modelResponse) {
-            // 保存历史记录 (包括用户消息和 AI 最终回复)
             const newHistory = [
                 ...history,
                 { role: 'user', parts: [{ text: userMessage }] },
@@ -154,11 +185,7 @@ export async function onRequest({ request, env }) {
 // ---------------------- 🚀 5. Tool 执行函数 ----------------------
 
 /**
- * 使用 Google Search API 执行图片搜索并返回第一个图片的 URL。
- * 🚨 注意：从 config 对象中读取 Keys。
- * @param {string} query 搜索关键词
- * @param {Object} config 完整的配置对象
- * @returns {Promise<string|null>} 返回图片的 URL 或 null
+ * 执行图片搜索
  */
 async function executeImageSearch(query, config) {
     
@@ -170,20 +197,60 @@ async function executeImageSearch(query, config) {
         return null; 
     }
 
-    // 使用 Google Custom Search Engine API 进行图片搜索
+    // searchType=image 用于图片搜索
     const searchUrl = `https://www.googleapis.com/customsearch/v1?key=${API_KEY}&cx=${CX_ID}&q=${encodeURIComponent(query)}&searchType=image&num=1`;
 
     try {
         const response = await fetch(searchUrl);
         const data = await response.json();
 
-        // 检查是否有结果，并返回第一个结果的链接
         if (data.items && data.items.length > 0 && data.items[0].link) {
             return data.items[0].link; 
         }
 
     } catch (error) {
         console.error("Google Image Search failed:", error);
+    }
+    
+    return null; 
+}
+
+
+// 🚀 新增：执行网页文本搜索的函数
+
+/**
+ * 使用 Google Search API 执行网页搜索并返回摘要和链接。
+ * @param {string} query 搜索关键词
+ * @param {Object} config 完整的配置对象
+ * @returns {Promise<Array<Object>|null>} 返回搜索结果数组
+ */
+async function executeWebSearch(query, config) {
+    const API_KEY = config.googleSearchApiKey;
+    const CX_ID = config.googleCxId;
+    
+    if (!API_KEY || !CX_ID) {
+        console.error("Missing Google Search API Keys in config.");
+        return null; 
+    }
+
+    // searchType=image (缺省) 默认进行网页搜索，num=3 返回3条结果
+    const searchUrl = `https://www.googleapis.com/customsearch/v1?key=${API_KEY}&cx=${CX_ID}&q=${encodeURIComponent(query)}&num=3`;
+
+    try {
+        const response = await fetch(searchUrl);
+        const data = await response.json();
+
+        if (data.items && data.items.length > 0) {
+            // 提取关键信息 (标题、摘要、链接) 传递给 AI
+            return data.items.map(item => ({
+                title: item.title,
+                snippet: item.snippet,
+                source_url: item.link
+            }));
+        }
+
+    } catch (error) {
+        console.error("Google Web Search failed:", error);
     }
     
     return null; 
