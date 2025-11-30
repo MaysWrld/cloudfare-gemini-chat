@@ -100,12 +100,11 @@ export async function onRequest({ request, env }) {
                     description: query, 
                 };
 
-            } else if (functionName === 'search_web') { // 🚀 处理网页搜索调用
+            } else if (functionName === 'search_web') {
                 
                 // 网页搜索
                 const searchResults = await executeWebSearch(query, config);
                 toolResultContent = {
-                    // 返回结构化的搜索结果
                     web_results: searchResults || "未找到相关网页搜索结果。",
                 };
             }
@@ -186,6 +185,9 @@ export async function onRequest({ request, env }) {
 
 /**
  * 执行图片搜索
+ * @param {string} query 搜索关键词
+ * @param {Object} config 完整的配置对象
+ * @returns {Promise<string|null>} 返回图片的 URL 或 null
  */
 async function executeImageSearch(query, config) {
     
@@ -216,8 +218,6 @@ async function executeImageSearch(query, config) {
 }
 
 
-// 🚀 新增：执行网页文本搜索的函数
-
 /**
  * 使用 Google Search API 执行网页搜索并返回摘要和链接。
  * @param {string} query 搜索关键词
@@ -233,7 +233,7 @@ async function executeWebSearch(query, config) {
         return null; 
     }
 
-    // searchType=image (缺省) 默认进行网页搜索，num=3 返回3条结果
+    // searchType (缺省) 默认进行网页搜索，num=3 返回3条结果
     const searchUrl = `https://www.googleapis.com/customsearch/v1?key=${API_KEY}&cx=${CX_ID}&q=${encodeURIComponent(query)}&num=3`;
 
     try {
