@@ -1,9 +1,13 @@
-// /functions/api/chat.js - 最终完整代码 (启用 Tool Calling: 图片搜索 + 网页搜索)
+// /functions/api/chat.js - 最终完整代码 (启用 Tool Calling: 图片搜索 + 网页搜索, 🚀 新增代理支持)
 
 import { isAuthenticated, getConfig } from '../auth';
 import { getHistory, saveHistory } from '../history';
 
-// ---------------------- 🚀 1. Tool 定义 ----------------------
+// 🚀 定义代理地址
+// 注意：这个地址需要完整地代理 Google Custom Search API 的基础路径
+const GOOGLE_PROXY_BASE_URL = 'https://google.400123456.xyz/customsearch/v1'; 
+
+// ---------------------- 1. Tool 定义 (保持不变) ----------------------
 
 const search_image_tool = {
     function_declarations: [{
@@ -22,7 +26,6 @@ const search_image_tool = {
     }],
 };
 
-// 🚀 新增：网页搜索工具定义
 const search_web_tool = {
     function_declarations: [{
         name: 'search_web',
@@ -40,7 +43,7 @@ const search_web_tool = {
     }],
 };
 
-// ---------------------- 2. Worker 请求处理 ----------------------
+// ---------------------- 2. Worker 请求处理 (保持不变) ----------------------
 
 export async function onRequest({ request, env }) {
     if (request.method !== 'POST') {
@@ -57,7 +60,7 @@ export async function onRequest({ request, env }) {
         // 构建第一次请求体
         const contents = [...history, { role: 'user', parts: [{ text: userMessage }] }];
         
-        const tools = [search_image_tool, search_web_tool]; // 🚀 启用两个工具
+        const tools = [search_image_tool, search_web_tool]; 
         
         const body = {
             contents: contents,
@@ -80,7 +83,7 @@ export async function onRequest({ request, env }) {
 
         let result = await response.json();
 
-        // ---------------------- 🚀 3. 处理 Tool Calling (多轮交互) ----------------------
+        // ---------------------- 3. 处理 Tool Calling (多轮交互) ----------------------
         
         const firstCandidate = result.candidates?.[0];
 
@@ -93,16 +96,14 @@ export async function onRequest({ request, env }) {
 
             if (functionName === 'search_image') {
                 
-                // 图片搜索
                 const imageUrl = await executeImageSearch(query, config);
                 toolResultContent = {
                     image_url: imageUrl || "未找到相关图片URL。",
                     description: query, 
                 };
 
-            } else if (functionName === 'search_web') {
+            } else if (functionName === 'search_web') { 
                 
-                // 网页搜索
                 const searchResults = await executeWebSearch(query, config);
                 toolResultContent = {
                     web_results: searchResults || "未找到相关网页搜索结果。",
@@ -110,7 +111,6 @@ export async function onRequest({ request, env }) {
             }
             
             if (toolResultContent) {
-                 // 构建 Tool 结果返回给 AI
                 const toolResponsePart = [
                     {
                         functionResponse: {
@@ -123,14 +123,12 @@ export async function onRequest({ request, env }) {
                     },
                 ];
 
-                // 构建第二次请求内容：用户消息 -> AI调用请求 -> Worker执行结果
                 const toolContents = [
                     ...contents, 
                     firstCandidate.content, 
                     { role: 'tool', parts: toolResponsePart } 
                 ];
 
-                // 重新调用 Gemini API (带上工具结果)
                 const toolBody = {
                     contents: toolContents,
                     config: {
@@ -154,7 +152,7 @@ export async function onRequest({ request, env }) {
             }
         }
         
-        // ---------------------- 4. 保存历史并返回 ----------------------
+        // ---------------------- 4. 保存历史并返回 (保持不变) ----------------------
         
         const modelResponse = result.candidates?.[0]?.content?.parts?.[0]?.text;
         
@@ -181,13 +179,10 @@ export async function onRequest({ request, env }) {
 }
 
 
-// ---------------------- 🚀 5. Tool 执行函数 ----------------------
+// ---------------------- 🚀 5. Tool 执行函数 (修改 URL) ----------------------
 
 /**
  * 执行图片搜索
- * @param {string} query 搜索关键词
- * @param {Object} config 完整的配置对象
- * @returns {Promise<string|null>} 返回图片的 URL 或 null
  */
 async function executeImageSearch(query, config) {
     
@@ -199,8 +194,8 @@ async function executeImageSearch(query, config) {
         return null; 
     }
 
-    // searchType=image 用于图片搜索
-    const searchUrl = `https://www.googleapis.com/customsearch/v1?key=${API_KEY}&cx=${CX_ID}&q=${encodeURIComponent(query)}&searchType=image&num=1`;
+    // 🚀 关键修改：使用代理地址 GOOGLE_PROXY_BASE_URL
+    const searchUrl = `${GOOGLE_PROXY_BASE_URL}?key=${API_KEY}&cx=${CX_ID}&q=${encodeURIComponent(query)}&searchType=image&num=1`;
 
     try {
         const response = await fetch(searchUrl);
@@ -219,10 +214,7 @@ async function executeImageSearch(query, config) {
 
 
 /**
- * 使用 Google Search API 执行网页搜索并返回摘要和链接。
- * @param {string} query 搜索关键词
- * @param {Object} config 完整的配置对象
- * @returns {Promise<Array<Object>|null>} 返回搜索结果数组
+ * 执行网页文本搜索的函数
  */
 async function executeWebSearch(query, config) {
     const API_KEY = config.googleSearchApiKey;
@@ -233,15 +225,14 @@ async function executeWebSearch(query, config) {
         return null; 
     }
 
-    // searchType (缺省) 默认进行网页搜索，num=3 返回3条结果
-    const searchUrl = `https://www.googleapis.com/customsearch/v1?key=${API_KEY}&cx=${CX_ID}&q=${encodeURIComponent(query)}&num=3`;
+    // 🚀 关键修改：使用代理地址 GOOGLE_PROXY_BASE_URL
+    const searchUrl = `${GOOGLE_PROXY_BASE_URL}?key=${API_KEY}&cx=${CX_ID}&q=${encodeURIComponent(query)}&num=3`;
 
     try {
         const response = await fetch(searchUrl);
         const data = await response.json();
 
         if (data.items && data.items.length > 0) {
-            // 提取关键信息 (标题、摘要、链接) 传递给 AI
             return data.items.map(item => ({
                 title: item.title,
                 snippet: item.snippet,
