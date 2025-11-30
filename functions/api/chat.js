@@ -1,4 +1,4 @@
-// /functions/api/chat.js - V9.8 修正版：使用正则表达式彻底清理文本开头的空白行
+// /functions/api/chat.js - 最终版本：支持 AI 文本标记（无 Tool Calling）
 
 import { isAuthenticated, getConfig } from '../auth';
 
@@ -24,40 +24,42 @@ function generateUuid() {
     });
 }
 
-
 /**
  * 辅助函数：将历史消息转换为 Gemini API 格式
- * 📌 关键修改：将 personaPrompt 传回，并作为前缀添加到首个用户消息中
  * @param {Array} history 
- * @param {string} userMessage 
- * @param {string} personaPrompt // 重新引入 personaPrompt 参数
+ * @param {Array<Object>} userContents // 传入完整的用户消息结构，可能包含图片
+ * @param {string} personaPrompt
  * @returns {Array<Object>}
  */
-function buildGeminiContents(history, userMessage, personaPrompt) {
+function buildGeminiContents(history, userContents, personaPrompt) {
     const contents = [];
     
     // 检查是否为第一条消息，并且有风格指令
-    let finalUserMessage = userMessage;
     if (history.length === 0 && personaPrompt) {
-        // 将风格指令作为前缀添加到第一条消息中，以保证兼容性
-        finalUserMessage = `[System Instruction: ${personaPrompt}]\n\n${userMessage}`;
+        const lastUserContentIndex = userContents.length - 1;
+        
+        // 找到当前用户消息的第一个文本部分
+        const textPart = userContents[lastUserContentIndex].parts.find(p => p.text);
+
+        if (textPart) {
+            // 将风格指令作为前缀添加到当前用户消息的文本部分中
+            textPart.text = `[System Instruction: ${personaPrompt}]\n\n${textPart.text}`;
+        }
     }
 
     // 历史消息部分 (最多 MAX_HISTORY_MESSAGES 轮对话)
     const historyToUse = history.slice(-MAX_HISTORY_MESSAGES);
     
+    // 历史消息现在必须直接使用存储的 parts 结构
     for (const msg of historyToUse) {
         contents.push({
             role: msg.role === 'user' ? 'user' : 'model', 
-            parts: [{ text: msg.text }]
+            parts: msg.parts // 直接使用保存的 parts 数组
         });
     }
 
-    // 插入当前用户消息 (可能是包含了风格指令的 finalUserMessage)
-    contents.push({
-        role: "user",
-        parts: [{ text: finalUserMessage }]
-    });
+    // 插入当前用户消息 (完整的 parts 结构)
+    contents.push(userContents[userContents.length - 1]);
 
     return contents;
 }
@@ -78,8 +80,14 @@ export async function onRequest({ request, env }) {
 
     try {
         const body = await request.json();
-        const userContents = body.contents; 
-        const userMessage = userContents[userContents.length - 1].parts[0].text; 
+        
+        // userContents 现在是完整的 Gemini 格式的数组，可能包含图片 parts
+        const userContents = body.contents;
+        
+        // 提取当前用户消息的文本部分和完整的 parts 结构，用于历史记录存储
+        const lastUserContent = userContents[userContents.length - 1];
+        const userMessageText = lastUserContent.parts.find(p => p.text)?.text || ''; 
+        const currentUserParts = lastUserContent.parts;
 
         const config = await getConfig(env);
 
@@ -87,58 +95,67 @@ export async function onRequest({ request, env }) {
             return new Response(JSON.stringify({ error: 'AI API Key 或 URL 未配置。请联系管理员。' }), { status: 500 });
         }
         
+        // 历史记录现在需要存储完整的 parts 结构
         const historyData = await env.HISTORY.get(sessionId, { type: 'json' });
         const history = Array.isArray(historyData) ? historyData : [];
         
-        // 📌 关键修改：将 personaPrompt 传给 buildGeminiContents
-        const geminiContents = buildGeminiContents(history, userMessage, config.personaPrompt);
+        // 将完整的 userContents 传给 buildGeminiContents
+        const geminiContents = buildGeminiContents(history, userContents, config.personaPrompt);
 
-        // ------------------ 🚨 配置对象中只保留 temperature 🚨 ------------------
+        // ------------------ 配置对象 ------------------
         const finalModel = config.modelName || 'gemini-2.5-flash'; 
         
         const generationConfig = {
-            // 确保 temperature 是一个浮点数
             temperature: parseFloat(config.temperature) || 0.7, 
         };
-
-        // 彻底移除 system_instruction，由 buildGeminiContents 负责插入
         
+        // 📌 核心：没有 tools 和 toolConfig 字段
         const geminiRequestBody = {
             contents: geminiContents,
             generationConfig: generationConfig, 
         };
 
         // 4. 调用 Gemini API
-        const apiResponse = await fetch(config.apiUrl.replace(/\/$/, '') + '/models/' + finalModel + ':generateContent?key=' + config.apiKey, {
+        let apiResponse = await fetch(config.apiUrl.replace(/\/$/, '') + '/models/' + finalModel + ':generateContent?key=' + config.apiKey, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(geminiRequestBody)
         });
         
-        const data = await apiResponse.json();
+        let data = await apiResponse.json();
         
         if (!apiResponse.ok) {
             const errorMessage = data.error?.message || apiResponse.statusText;
             return new Response(JSON.stringify({ error: errorMessage, status: apiResponse.status }), { status: apiResponse.status });
         }
         
-        let aiText = data.candidates?.[0]?.content?.parts?.[0]?.text; // 使用 let
-        
-        if (!aiText) {
+        let candidate = data.candidates?.[0];
+
+        if (!candidate || !candidate.content || !candidate.content.parts) {
              return new Response(JSON.stringify({ error: 'AI 返回了一个空响应。' }), { status: 500 });
         }
+        
+        // ------------------ 6. 更新历史记录 ------------------
+        
+        // 正常文本清理逻辑
+        let aiParts = data.candidates?.[0]?.content?.parts;
+        let aiText = aiParts?.find(p => p.text)?.text; // 查找文本部分
+        
+        if (aiText) {
+             aiText = aiText.replace(/^\s+/, '');
+             const textPart = aiParts.find(p => p.text);
+             if (textPart) textPart.text = aiText; 
+        }
 
-        // 💡 V9.8 修正：使用正则表达式彻底清理文本开头的空白行和空格
-        // 正则表达式 ^\s+ 匹配字符串开头（^）的一个或多个连续空白字符（\s+）
-        aiText = aiText.replace(/^\s+/, '');
-        data.candidates[0].content.parts[0].text = aiText; // 更新响应数据中的文本
+        // 获取 AI 返回的完整 parts 结构
+        const aiPartsToSave = data.candidates?.[0]?.content?.parts || [{ text: aiText || '' }];
 
-        // 6. 更新历史记录
         const newHistory = [
             ...history,
-            // 注意：这里保存到历史记录中的 user 消息仍然是原始 userMessage，不带 system prompt
-            { role: 'user', text: userMessage }, 
-            { role: 'model', text: aiText }
+            // user 消息保存完整的 parts
+            { role: 'user', parts: currentUserParts }, 
+            // model 消息保存完整的 parts
+            { role: 'model', parts: aiPartsToSave } 
         ];
         
         const maxHistoryToSave = (MAX_HISTORY_MESSAGES + 1) * 2; 
@@ -146,12 +163,13 @@ export async function onRequest({ request, env }) {
         
         await env.HISTORY.put(sessionId, JSON.stringify(historyToSave), { expirationTtl: COOKIE_TTL_SECONDS });
 
-        // 7. 构造响应头
+        // ------------------ 7. 构造响应头 ------------------
         const headers = { 'Content-Type': 'application/json' };
         if (setCookie) {
-            headers['Set-Cookie'] = `${SESSION_COOKIE_NAME}=${sessionId}; Path=/; Max-Age=${COOKIE_TTL_SECONDS}; HttpOnly; Secure; SameSite=Strict`;
+             headers['Set-Cookie'] = `${SESSION_COOKIE_NAME}=${sessionId}; Path=/; Max-Age=${COOKIE_TTL_SECONDS}; HttpOnly; Secure; SameSite=Strict`;
         }
 
+        // 返回包含 AI 文本（其中包含图片标记）的 data
         return new Response(JSON.stringify(data), { status: 200, headers: headers });
 
     } catch (error) {
