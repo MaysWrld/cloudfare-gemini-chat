@@ -446,9 +446,16 @@
             typingTimerIds = [];
         }
         
-        // --- 辅助函数：Markdown 渲染 (保持不变) ---
+        // --- 辅助函数：Markdown 渲染 (V9.9 修正: 增加起始行清理) ---
         function renderMarkdown(text) {
             let htmlText = text;
+
+            // 💡 V9.9 核心修正：双重清理文本开头的空白和换行
+            // 1. 移除所有空白字符（空格、换行等），以防后端遗漏
+            htmlText = htmlText.replace(/^\s+/, ''); 
+            // 2. 移除 Markdown 渲染开始时，可能被误解析为 `<br>` 的换行符
+            htmlText = htmlText.replace(/^[\r\n]+/, ''); 
+            // 确保经过两次清理后，htmlText 是从第一个非空白字符开始的。
 
             // 1. 处理代码块 
             htmlText = htmlText.replace(/```(\w*)\n([\s\S]*?)```/g, function(match, lang, code) {
@@ -552,8 +559,8 @@
             return messageDiv;
         }
         
-        // --- 打字机效果函数 (保持不变) ---
-        function startTyping(messageElement, rawText, delay = 1) { 
+        // --- 打字机效果函数 (V9.9 优化: 默认速度更快，改为 0ms) ---
+        function startTyping(messageElement, rawText, delay = 0) { // 🚀 修改 delay = 0
             return new Promise(resolve => {
                 let i = 0;
                 const cursor = '<span style="opacity: 0.8; margin-left: 2px; color: var(--text-main);">▋</span>'; 
@@ -561,9 +568,10 @@
                     if (i < rawText.length) {
                         try {
                             const currentText = rawText.substring(0, i + 1);
+                            
                             messageElement.innerHTML = renderMarkdown(currentText) + cursor;
                             i++;
-                            const timerId = setTimeout(type, delay);
+                            const timerId = setTimeout(type, delay); 
                             typingTimerIds.push(timerId); 
                         } catch (e) {
                             console.error("Typing rendering error:", e);
