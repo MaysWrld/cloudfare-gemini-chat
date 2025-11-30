@@ -4,12 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="light dark"> 
-    <title id="pageTitle">AI 助手</title> 
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2d000/svg' viewBox='0 0 100 100'><text y='-.1em' x='-.05em' font-size='90'>✨</text></svg>">
-    
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.css" integrity="sha384-wnj80r8f1QO9F2LpQxQW5R0q0fVw8u2X/T2qjB042F6Z01f/r4t6E8X2j5tG2vP" crossorigin="anonymous">
-    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.js" integrity="sha384-f7b5K2p+lK4OQ+vG2j2Jd7Q/E5S8G9w4+P5I2V4K5vJ8+A8p5zFp5F4w9H8z6V" crossorigin="anonymous"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/contrib/auto-render.min.js" integrity="sha384-r+lW3xY4O5m3+s7pDkC7y3p+Tz3S6t2E6z+n0P2h0F2zJ/8T1eXq3D5x/3/T7F3T1T" crossorigin="anonymous" onload="document.dispatchEvent(new Event('katexloaded'));"></script>
+    <title id="pageTitle">AI 助手</title> <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2d000/svg' viewBox='0 0 100 100'><text y='-.1em' x='-.05em' font-size='90'>✨</text></svg>">
     <style>
         /* =================================================== */
         /* === 颜色变量定义：深浅模式切换的核心 (V8.4 金色主题) === */
@@ -258,15 +253,6 @@
             font-weight: 600;
             color: var(--text-header);
         }
-        
-        /* 🚀 V8.6 新增：KaTeX 公式块的样式微调 */
-        .ai-message .katex-display {
-            margin: 1em 0;
-            padding: 10px;
-            background-color: var(--color-code-bg);
-            border-radius: 8px;
-            overflow-x: auto;
-        }
 
         /* 输入区域样式：使用高透明度背景 */
         .input-area { display: flex; padding: 16px 24px; border-top: 1px solid var(--border-main); background-color: var(--bg-card); /* 🚀 V8.3：更高透明度 */ align-items: center; gap: 10px; flex-shrink: 0; }
@@ -346,15 +332,11 @@
             // 粒子类
             class Particle {
                 constructor() {
-                    this.reset(); // 使用 reset 初始化
-                }
-                
-                // 🚀 V8.5 核心修改：移除边界反弹，改为重置
-                reset() {
                     this.x = Math.random() * width;
                     this.y = Math.random() * height;
                     this.radius = Math.random() * 1.5 + 0.5;
-                    // V8.5 核心修改：速度范围 -0.75 到 0.75
+                    
+                    // 🚀 V8.5 核心修改：提高速度范围到 -0.75 到 0.75
                     this.vx = Math.random() * 1.5 - 0.75; 
                     this.vy = Math.random() * 1.5 - 0.75;
                 }
@@ -364,15 +346,9 @@
                     this.x += this.vx;
                     this.y += this.vy;
 
-                    // 边界检查：出界则重置到对侧或随机位置
-                    if (this.x < 0 || this.x > width || this.y < 0 || this.y > height) {
-                        this.reset();
-                        // 可选择将粒子重置到对侧以模拟无限空间（更平滑）
-                        // if (this.x < 0) this.x = width;
-                        // if (this.x > width) this.x = 0;
-                        // if (this.y < 0) this.y = height;
-                        // if (this.y > height) this.y = 0;
-                    }
+                    // 边界反弹
+                    if (this.x < 0 || this.x > width) this.vx *= -1;
+                    if (this.y < 0 || this.y > height) this.vy *= -1;
                 }
 
                 // 绘制粒子
@@ -470,43 +446,18 @@
             typingTimerIds = [];
         }
         
-        // --- 辅助函数：Markdown 渲染 (🚀 V8.6 核心修改：添加 KaTeX 支持) ---
+        // --- 辅助函数：Markdown 渲染 (保持不变) ---
         function renderMarkdown(text) {
-            // 1. 确保 HTML 特殊字符被转义，但保留 KaTeX 公式标记
-            // 使用一个临时占位符来保护公式内容
-            let tempHtmlText = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-            tempHtmlText = tempHtmlText.replace(/\*\*/g, '@@STRONG@@');
-            tempHtmlText = tempHtmlText.replace(/\*/g, '@@EM@@');
-            tempHtmlText = tempHtmlText.replace(/`/g, '@@CODE@@');
+            let htmlText = text;
 
-            // 找到所有 LaTeX 公式并使用占位符保护，防止Markdown解析干扰
-            const formulaMap = new Map();
-            let formulaCounter = 0;
-            
-            // 块级公式：$$ ... $$
-            tempHtmlText = tempHtmlText.replace(/\$\$(.+?)\$\$/gs, (match, formula) => {
-                const key = `@@FORMULA_BLOCK_${formulaCounter++}@@`;
-                formulaMap.set(key, `$$${formula}$$`);
-                return key;
-            });
-
-            // 行内公式：$ ... $ (注意：需避免匹配单个 $ 符号)
-            tempHtmlText = tempHtmlText.replace(/(^|[^$])\$(.+?)\$([^$]|$)/g, (match, pre, formula, post) => {
-                const key = `@@FORMULA_INLINE_${formulaCounter++}@@`;
-                formulaMap.set(key, `$${formula}$`);
-                return pre + key + post;
-            });
-
-
-            // 2. 处理代码块
-            let htmlText = tempHtmlText.replace(/@@CODE@@@@CODE@@@@CODE@@(\w*)\n([\s\S]*?)@@CODE@@@@CODE@@@@CODE@@/g, function(match, lang, code) {
-                // 代码块内部不再需要转义
-                const originalCode = code.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>'); 
+            // 1. 处理代码块 
+            htmlText = htmlText.replace(/```(\w*)\n([\s\S]*?)```/g, function(match, lang, code) {
+                const escapedCode = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
                 const language = lang ? `<span class="code-lang" style="font-size: 0.8em; color: var(--color-code-lang); display: block; margin-bottom: 5px;">${lang}</span>` : '';
-                return `<pre><code>${language}${originalCode}</code></pre>`;
+                return `<pre><code>${language}${escapedCode}</code></pre>`;
             });
 
-            // 3. 表格解析 (逻辑不变，但使用转义后的文本进行解析)
+            // 2. 表格解析
             const lines = htmlText.split('\n');
             let outputLines = [];
             let inTable = false;
@@ -566,25 +517,17 @@
             htmlText = outputLines.join('\n');
 
 
-            // 4. 处理标题、列表和强调
+            // 3. 处理标题、列表和强调
             htmlText = htmlText.replace(/^## (.*$)/gim, '<h2>$1</h2>');
             htmlText = htmlText.replace(/^\* (.*$)/gim, '<ul><li>$1</li></ul>');
             htmlText = htmlText.replace(/<\/li>\n<ul>/gim, '</li>'); 
             htmlText = htmlText.replace(/<\/ul>(\n<ul>)?/gim, '</ul>');
             
-            // 恢复强调标记
-            htmlText = htmlText.replace(/@@STRONG@@(.*?)@@STRONG@@/g, '<strong>$1</strong>');
-            htmlText = htmlText.replace(/@@EM@@(.*?)@@EM@@/g, '<em>$1</em>');
+            htmlText = htmlText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            htmlText = htmlText.replace(/\*(.*?)\*/g, '<em>$1</em>');
             
-            // 5. 替换最后的换行符为 <br>
-            let finalHtml = htmlText.replace(/\n/g, '<br>');
-
-            // 6. 恢复 KaTeX 公式占位符
-            formulaMap.forEach((value, key) => {
-                finalHtml = finalHtml.replace(key, value);
-            });
-            
-            return finalHtml;
+            // 4. 替换最后的换行符为 <br>
+            return htmlText.replace(/\n/g, '<br>');
         }
         // --- Markdown 渲染函数修改结束 ---
 
@@ -597,11 +540,10 @@
                 messageDiv.classList.add('user-message');
                 messageDiv.textContent = text; 
             } else {
-                messageDiv.classList.add('ai-message');
+                messageDiv.classList.add('system-message');
                 messageDiv.innerHTML = text;
             }
             
-            // 插入到哨兵之前
             chatBox.insertBefore(messageDiv, scrollSentinel);
             
             if (sender !== 'user') {
@@ -610,7 +552,7 @@
             return messageDiv;
         }
         
-        // --- 打字机效果函数 (🚀 V8.6 修改：在打字结束后渲染 KaTeX) ---
+        // --- 打字机效果函数 (保持不变) ---
         function startTyping(messageElement, rawText, delay = 1) { 
             return new Promise(resolve => {
                 let i = 0;
@@ -619,11 +561,8 @@
                     if (i < rawText.length) {
                         try {
                             const currentText = rawText.substring(0, i + 1);
-                            // 打字过程中不渲染 KaTeX
-                            messageElement.innerHTML = renderMarkdown(currentText) + cursor; 
+                            messageElement.innerHTML = renderMarkdown(currentText) + cursor;
                             i++;
-                            // 确保滚动条始终在底部
-                            chatBox.scrollTop = chatBox.scrollHeight; 
                             const timerId = setTimeout(type, delay);
                             typingTimerIds.push(timerId); 
                         } catch (e) {
@@ -632,20 +571,7 @@
                             resolve(); 
                         }
                     } else {
-                        // 打字结束，渲染最终 Markdown/KaTeX
                         messageElement.innerHTML = renderMarkdown(rawText);
-                        
-                        // 🚀 V8.6 新增：渲染 KaTeX 公式
-                        if (typeof renderMathInElement === 'function') {
-                            renderMathInElement(messageElement, {
-                                delimiters: [
-                                    {left: "$$", right: "$$", display: true},
-                                    {left: "$", right: "$", display: false},
-                                ],
-                                throwOnError: false
-                            });
-                        }
-                        
                         resolve();
                     }
                 }
