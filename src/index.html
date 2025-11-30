@@ -379,13 +379,13 @@
                 if (currentAbortController) {
                     currentAbortController.abort();
                 }
-                
+
                 // 🚀 V8.6 核心修改：清除本地 sessionId
                 localStorage.removeItem('chat_session_id');
-                
+
                 // 🚀 V8.6 核心修改：向后端发送请求，清除 KV 历史记录
                 // 注意：这里需要向 /api/clear_chat 发送 sessionId
-                const response = await fetch('/api/new_chat', { 
+                const response = await fetch('/api/new_chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ sessionId: sessionId }),
@@ -426,16 +426,15 @@
             setTimeout(() => { aiMessageDiv.textContent = '思考中。。。'; }, 100);
 
             try {
-                
+
                 // 🚀 V8.6 修正：后端 Worker 自己处理图片和历史记录，前端只传必要数据
                 const requestBody = {
-                    message: userMessage, 
+                    message: userMessage,
                     sessionId: sessionId // 🚀 确保发送 sessionId
                 };
-                
+
                 // 移除图片上传逻辑 (您的 worker/functions/api/chat.js 不支持直接接收 Base64 图片)
-                // 如果需要图片功能，需要对 chat.js 进行大幅修改，使其能处理多模态请求。
-                
+
                 const response = await fetch('/api/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -521,7 +520,7 @@
             }, 50);
         }
 
-        // --- 事件监听器 (保持不变) ---
+        // --- 事件监听器 (V8.6 修正：确保完整闭合) ---
         sendButton.addEventListener('click', sendMessage);
 
         messageInput.addEventListener('keydown', function(event) {
@@ -539,3 +538,5 @@
         fetchConfig(); // 加载配置和欢迎语
 
     </script>
+</body>
+</html>
