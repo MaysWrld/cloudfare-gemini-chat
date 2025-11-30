@@ -46,7 +46,7 @@
                 <label for="personaPrompt" class="form-label">AI 角色指令 (基础 Prompt):</label>
                 <textarea id="personaPrompt" name="personaPrompt" class="form-control" rows="5" required placeholder="定义 AI 的角色和回复风格。此指令将与图片工具指令自动合并。"></textarea>
                 <div class="form-text">
-                    你输入的指令将与底层的**图片工具调用指令**自动合并。
+                    你输入的指令将与底层的**图片/网页工具调用指令**自动合并。
                 </div>
             </div>
             
@@ -62,17 +62,18 @@
                 <input type="text" id="apiKey" name="apiKey" class="form-control" required>
             </div>
 
-            <h5 class="mt-4 mb-3">Google 搜索工具设置 (图片搜索)</h5> 
+            <h5 class="mt-4 mb-3">Google 搜索工具设置 (图片/网页搜索)</h5> 
             
             <div class="mb-3">
                 <label for="googleSearchApiKey" class="form-label">Google Search API Key:</label>
-                <input type="text" id="googleSearchApiKey" name="googleSearchApiKey" class="form-control" placeholder="用于 Tool Calling 执行图片搜索">
+                <input type="text" id="googleSearchApiKey" name="googleSearchApiKey" class="form-control" placeholder="用于 Tool Calling 执行图片和网页搜索">
             </div>
 
             <div class="mb-3">
                 <label for="googleCxId" class="form-label">Google Custom Search Engine ID (CX ID):</label>
-                <input type="text" id="googleCxId" name="googleCxId" class="form-control" placeholder="请确保该 CSE 已启用图片搜索">
+                <input type="text" id="googleCxId" name="googleCxId" class="form-control" placeholder="请确保该 CSE 已启用图片和网页搜索">
             </div>
+            
             <div class="mb-3">
                 <label for="modelName" class="form-label">模型名称:</label>
                 <select id="modelName" name="modelName" class="form-select" required>
@@ -98,9 +99,11 @@
         const form = document.getElementById('configForm');
         const saveButton = document.querySelector('button[type="submit"]'); 
         
-        // 🚀 新的图片功能指令（用于合并到用户输入的 Prompt 中）
+        // 🚀 新的图片/网页功能指令（用于合并到用户输入的 Prompt 中）
         const IMAGE_FUNCTION_PROMPT = `
-            **[功能强制指令]**：当需要提供图片时，你必须调用内置的 \`search_image\` 工具来获取图片URL。工具调用成功后，你必须将返回的URL严格包装在文本中，格式为：<IMAGE_URL: [互联网可访问的图片URL], [图片描述]>。
+            **[功能强制指令]**：
+            1. 当需要提供图片时，你必须调用内置的 \`search_image\` 工具来获取图片URL。工具调用成功后，你必须将返回的URL严格包装在文本中，格式为：<IMAGE_URL: [互联网可访问的图片URL], [图片描述]>。
+            2. 当需要搜索网页获取最新信息或事实时，你必须调用内置的 \`search_web\` 工具。
         `.trim();
 
         /**
