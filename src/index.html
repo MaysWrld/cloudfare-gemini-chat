@@ -446,7 +446,7 @@
             typingTimerIds = [];
         }
         
-        // --- 辅助函数：Markdown 渲染 (保持不变) ---
+        // --- 辅助函数：Markdown 渲染 (修改：支持图片URL解析) ---
         function renderMarkdown(text) {
             let htmlText = text;
 
@@ -516,6 +516,28 @@
 
             htmlText = outputLines.join('\n');
 
+            // -----------------------------------------------------------------
+            // 🚀 核心修改：图片 URL 标记解析
+            // 标记格式: <IMAGE_URL: [图片URL], [图片描述]>
+            // -----------------------------------------------------------------
+            const imageUrlRegex = /<IMAGE_URL:\s*(.+?),\s*(.+?)>/g;
+            htmlText = htmlText.replace(imageUrlRegex, function(match, url, description) {
+                const cleanUrl = url.trim();
+                // 移除描述末尾可能的 '>'，并清理描述
+                const cleanDescription = description.trim().replace(/>$/, '').trim(); 
+
+                // 返回一个包含图片的 HTML 结构
+                return `
+                    <div style="margin: 15px 0; max-width: 100%; text-align: center; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                        <img src="${cleanUrl}" alt="${cleanDescription}" style="max-width: 100%; height: auto; display: block; min-height: 100px; object-fit: cover; border-radius: 12px 12px 0 0;">
+                        <p style="font-size: 0.8em; color: var(--text-main); margin: 5px 0 10px; opacity: 0.7; padding: 0 10px;">
+                            图：${cleanDescription}
+                        </p>
+                    </div>
+                `;
+            });
+            // -----------------------------------------------------------------
+
 
             // 3. 处理标题、列表和强调
             htmlText = htmlText.replace(/^## (.*$)/gim, '<h2>$1</h2>');
@@ -540,8 +562,9 @@
                 messageDiv.classList.add('user-message');
                 messageDiv.textContent = text; 
             } else {
-                messageDiv.classList.add('system-message');
-                messageDiv.innerHTML = text;
+                messageDiv.classList.add('ai-message');
+                // 📌 注意：这里改为 innerHTML，但仅用于系统消息
+                messageDiv.innerHTML = text; 
             }
             
             chatBox.insertBefore(messageDiv, scrollSentinel);
@@ -677,12 +700,33 @@
             setTimeout(() => { aiMessageDiv.textContent = '思考中。。。'; }, 100);
             
             try {
+                // 📌 核心修改：构造内容以支持图片
+                const contents = [];
+                // 检查是否有上传文件
+                const uploadedImage = document.getElementById('uploadedImage');
+                if (uploadedImage && uploadedImage.src.startsWith('data:')) {
+                    // 如果有上传图片，则构造包含图片和文本的 parts
+                    contents.push({
+                        role: "user",
+                        parts: [
+                            { inlineData: { 
+                                mimeType: "image/jpeg", // 假设是jpeg，实际应根据上传文件类型调整
+                                data: uploadedImage.src.split(',')[1] // 提取 Base64 部分
+                            }},
+                            { text: userMessage }
+                        ]
+                    });
+                    
+                } else {
+                    // 否则只发送文本
+                    contents.push({ role: "user", parts: [{ text: userMessage }] });
+                }
+                // 📌 核心修改结束
+
                 const response = await fetch('/api/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ role: "user", parts: [{ text: userMessage }] }] 
-                    }),
+                    body: JSON.stringify({ contents: contents }), // 使用新的 contents
                     signal: signal 
                 });
 
@@ -694,6 +738,7 @@
                 const data = await response.json();
                 
                 if (response.ok) {
+                    // 获取 AI 返回的文本，可能包含 <IMAGE_URL:...> 标记
                     const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || '抱歉，AI 返回了空响应。';
                     
                     await startTyping(aiMessageDiv, aiText); 
