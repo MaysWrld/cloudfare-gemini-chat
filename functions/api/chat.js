@@ -1,4 +1,4 @@
-// /functions/api/chat.js - 最终兼容版：解决 system_instruction 错误
+// /functions/api/chat.js - V9.7 修正版：新增文本清理
 
 import { isAuthenticated, getConfig } from '../auth';
 
@@ -122,11 +122,15 @@ export async function onRequest({ request, env }) {
             return new Response(JSON.stringify({ error: errorMessage, status: apiResponse.status }), { status: apiResponse.status });
         }
         
-        const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        let aiText = data.candidates?.[0]?.content?.parts?.[0]?.text; // 使用 let
         
         if (!aiText) {
              return new Response(JSON.stringify({ error: 'AI 返回了一个空响应。' }), { status: 500 });
         }
+
+        // 💡 V9.7 修正：清理 AI 文本开头的空白行和空格，改善表格和列表渲染体验
+        aiText = aiText.trimStart(); 
+        data.candidates[0].content.parts[0].text = aiText; // 更新响应数据中的文本
 
         // 6. 更新历史记录
         const newHistory = [
