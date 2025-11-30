@@ -12,7 +12,7 @@
         :root {
             /* Light Mode Variables */
             --bg-main: #f0f4f9;
-            --bg-card: rgba(255, 255, 255, 0.7); /* 🚀 V8.3：更高透明度 (0.7) */
+            --bg-card: rgba(255, 255, 255, 0.7); 
             --bg-input: #f8f9fa;
             --text-main: #3c4043;
             --text-header: #202124;
@@ -28,15 +28,15 @@
             --color-brand-blue-rgb: 26, 115, 232;
 
             /* 🚀 V8.4 核心修改：金色主题 */
-            --color-particle: #FFD700; /* 标准金色 */
-            --color-particle-line: #FFA500; /* 橙金色，连线更明显 */
+            --color-particle: #FFD700; 
+            --color-particle-line: #FFA500; 
         }
 
         /* 深色模式：根据设备设置覆盖颜色变量 */
         @media (prefers-color-scheme: dark) {
             :root {
                 --bg-main: #121212;
-                --bg-card: rgba(32, 32, 32, 0.7); /* 🚀 V8.3：更高透明度 (0.7) */
+                --bg-card: rgba(32, 32, 32, 0.7); 
                 --bg-input: #303030;
                 --text-main: #e0e0e0;
                 --text-header: #f5f5f5;
@@ -52,8 +52,8 @@
                 --color-brand-blue-rgb: 91, 146, 229; 
 
                 /* 🚀 V8.4 核心修改：金色主题 */
-                --color-particle: #FFCC00; /* 亮金色 */
-                --color-particle-line: #FFEB80; /* 淡金色连线 */
+                --color-particle: #FFCC00; 
+                --color-particle-line: #FFEB80; 
             }
         }
 
@@ -78,7 +78,7 @@
             width: 100%; 
             height: 100%; 
             max-width: 960px; 
-            background-color: var(--bg-card); /* 🚀 V8.3：更高透明度 */
+            background-color: var(--bg-card); 
             border-radius: 0; 
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2); 
             display: flex; 
@@ -94,7 +94,7 @@
         /* 头部样式：使用高透明度背景 */
         .header { 
             padding: 16px 24px; 
-            background-color: var(--bg-card); /* 🚀 V8.3：更高透明度 */
+            background-color: var(--bg-card); 
             border-bottom: 1px solid var(--border-main); 
             color: var(--text-header); 
             font-size: 1.5em; 
@@ -107,32 +107,20 @@
         }
 
         /* 🚀 V7.8 标题呼吸动画 */
-        /* 标题文字样式 */
         .header-title { 
             font-weight: 500; 
             animation: breathe-text 2s infinite alternate ease-in-out; 
             transition: color 0.2s;
         }
-
-        /* 🚀 V7.8 新增：标题文字呼吸动画 */
         @keyframes breathe-text {
-            0% { 
-                opacity: 1;
-                text-shadow: 0 0 1px rgba(var(--color-brand-blue-rgb), 0.2); 
-            }
-            50% { 
-                opacity: 0.95; 
-                text-shadow: 0 0 6px rgba(var(--color-brand-blue-rgb), 0.7); 
-            }
-            100% {
-                opacity: 1;
-                text-shadow: 0 0 1px rgba(var(--color-brand-blue-rgb), 0.2); 
-            }
+            0% { opacity: 1; text-shadow: 0 0 1px rgba(var(--color-brand-blue-rgb), 0.2); }
+            50% { opacity: 0.95; text-shadow: 0 0 6px rgba(var(--color-brand-blue-rgb), 0.7); }
+            100% { opacity: 1; text-shadow: 0 0 1px rgba(var(--color-brand-blue-rgb), 0.2); }
         }
 
         .header-icon { font-size: 1em; } 
 
-        /* 🚀 欢迎语样式：用于调节字体大小 */
+        /* 🚀 欢迎语样式 */
         .welcome-overlay {
             position: absolute;
             left: 50%;
@@ -148,8 +136,6 @@
             z-index: 10;
             white-space: nowrap;
         }
-
-        /* 欢迎语消失动画 */
         @keyframes fade-out {
             0% { opacity: 0.7; }
             100% { opacity: 0; visibility: hidden; }
@@ -157,7 +143,6 @@
         .welcome-overlay.fading {
             animation: fade-out 0.5s forwards;
         }
-
 
         /* V6.2 精简新聊天图标按钮样式 */
         .input-area .new-chat-icon-button {
@@ -180,7 +165,6 @@
             background-color: var(--color-ai);
             border-color: var(--color-focus-blue);
         }
-        /* 按钮样式结束 */
 
         .chat-box { 
             flex-grow: 1; 
@@ -255,7 +239,7 @@
         }
 
         /* 输入区域样式：使用高透明度背景 */
-        .input-area { display: flex; padding: 16px 24px; border-top: 1px solid var(--border-main); background-color: var(--bg-card); /* 🚀 V8.3：更高透明度 */ align-items: center; gap: 10px; flex-shrink: 0; }
+        .input-area { display: flex; padding: 16px 24px; border-top: 1px solid var(--border-main); background-color: var(--bg-card); align-items: center; gap: 10px; flex-shrink: 0; }
 
         #messageInput { flex-grow: 1; padding: 12px 18px; border: 1px solid var(--border-main); border-radius: 24px; font-size: 1em; outline: none; transition: border-color 0.2s, box-shadow 0.2s; background-color: var(--bg-input); color: var(--text-main); }
         #messageInput:focus { border-color: var(--color-focus-blue); box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.2); background-color: var(--bg-card); }
@@ -318,40 +302,31 @@
             let particles = [];
             const PARTICLE_COUNT = 70;
 
-            // 获取 CSS 变量
             function getCssVariable(name) {
                 return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
             }
 
-            // 重新设置 Canvas 尺寸
             function resizeCanvas() {
                 width = canvas.width = window.innerWidth;
                 height = canvas.height = window.innerHeight;
             }
 
-            // 粒子类
             class Particle {
                 constructor() {
                     this.x = Math.random() * width;
                     this.y = Math.random() * height;
                     this.radius = Math.random() * 1.5 + 0.5;
-
-                    // 🚀 V8.5 核心修改：提高速度范围到 -0.75 到 0.75
                     this.vx = Math.random() * 1.5 - 0.75; 
                     this.vy = Math.random() * 1.5 - 0.75;
                 }
 
-                // 更新位置
                 update() {
                     this.x += this.vx;
                     this.y += this.vy;
-
-                    // 边界反弹
                     if (this.x < 0 || this.x > width) this.vx *= -1;
                     if (this.y < 0 || this.y > height) this.vy *= -1;
                 }
 
-                // 绘制粒子
                 draw() {
                     ctx.beginPath();
                     ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
@@ -360,7 +335,6 @@
                 }
             }
 
-            // 初始化粒子
             function initParticles() {
                 particles = [];
                 for (let i = 0; i < PARTICLE_COUNT; i++) {
@@ -368,7 +342,6 @@
                 }
             }
 
-            // 绘制连线
             function connectParticles() {
                 const maxDistance = 100;
                 const lineColor = getCssVariable('--color-particle-line');
@@ -378,16 +351,14 @@
                         const p1 = particles[i];
                         const p2 = particles[j];
 
-                        // 计算距离
                         const dx = p1.x - p2.x;
                         const dy = p1.y - p2.y;
                         const distance = Math.sqrt(dx * dx + dy * dy);
 
                         if (distance < maxDistance) {
-                            // 距离越远，透明度越低
                             const opacity = 1 - (distance / maxDistance);
                             ctx.strokeStyle = lineColor;
-                            ctx.globalAlpha = opacity * 0.8; // 保持较高的连线不透明度
+                            ctx.globalAlpha = opacity * 0.8; 
                             ctx.lineWidth = 1;
                             ctx.beginPath();
                             ctx.moveTo(p1.x, p1.y);
@@ -399,42 +370,66 @@
                 ctx.globalAlpha = 1;
             }
 
-            // 主循环
             function animate() {
-                // 清空画布
                 ctx.clearRect(0, 0, width, height); 
-
-                // 绘制连线
                 connectParticles();
-
-                // 更新和绘制粒子
                 particles.forEach(p => {
                     p.update();
                     p.draw();
                 });
-
                 requestAnimationFrame(animate);
             }
 
-            // 初始化
             resizeCanvas();
             initParticles();
             window.addEventListener('resize', () => {
                 resizeCanvas();
                 initParticles();
+                // 窗口大小变化时，重新计算哨兵高度
+                updateSentinelHeight();
             });
 
-            // 启动动画
             animate();
         }
         // 🚀 V8.0 Canvas 动画脚本函数结束
 
 
-        // --- 辅助函数：动态更新哨兵高度 (保持 V7.5 逻辑) ---
+        // --- 辅助函数：动态更新哨兵高度 (🚀 V8.7 动态留白模式) ---
         function updateSentinelHeight() {
             if (isSentinelActive) {
                 const chatBoxHeight = chatBox.clientHeight;
-                scrollSentinel.style.height = (chatBoxHeight + 10) + 'px';
+                const messages = chatBox.querySelectorAll('.message');
+                const gap = 16; // 消息之间的间距 (来自 CSS: .chat-box gap: 16px)
+
+                let totalContentHeight = 0;
+                
+                // 1. 计算所有消息元素的总高度和间距
+                messages.forEach(msg => {
+                    // clientHeight: 元素高度 + padding
+                    totalContentHeight += msg.clientHeight; 
+                });
+                
+                // 2. 加上所有消息之间的间距
+                if (messages.length > 0) {
+                    totalContentHeight += (messages.length - 1) * gap;
+                }
+                
+                // 3. 加上 chatBox 自身的 padding (20px 顶部和 20px 底部)
+                totalContentHeight += 40; 
+                
+                let requiredSentinelHeight = 0;
+                
+                // 4. 计算所需的留白高度
+                if (totalContentHeight < chatBoxHeight) {
+                    requiredSentinelHeight = chatBoxHeight - totalContentHeight;
+                }
+
+                // 确保至少有 1px 的留白（以防计算误差）
+                requiredSentinelHeight = Math.max(0, requiredSentinelHeight);
+                
+                // 应用留白高度
+                scrollSentinel.style.height = requiredSentinelHeight + 'px';
+                
             } else {
                 scrollSentinel.style.height = '0px';
             }
@@ -466,17 +461,13 @@
             for (let i = 0; i < lines.length; i++) {
                 const line = lines[i].trim();
 
-                const isSeparator = line.match(/^\|[ \t]*([: \-]*?\|)+[ \t]*$/);
-
                 if (!inTable && line.match(/^\|.*?\|$/) && i + 1 < lines.length && lines[i+1].trim().match(/^\|[ \t]*([: \-]*?\|)+[ \t]*$/)) {
                     const headerLine = lines[i];
                     outputLines.push('<table><thead><tr>');
                     const headers = headerLine.split('|').slice(1, -1);
                     headerCells = headers.length;
 
-                    headers.forEach(header => {
-                        outputLines.push(`<th>${header.trim()}</th>`);
-                    });
+                    headers.forEach(header => { outputLines.push(`<th>${header.trim()}</th>`); });
 
                     outputLines.push('</tr></thead><tbody>');
                     inTable = true;
@@ -487,9 +478,7 @@
 
                     if (cells.length === headerCells) {
                         outputLines.push('<tr>');
-                        cells.forEach(cell => {
-                            outputLines.push(`<td>${cell.trim()}</td>`);
-                        });
+                        cells.forEach(cell => { outputLines.push(`<td>${cell.trim()}</td>`); });
                         outputLines.push('</tr>');
                     } else {
                         outputLines.push('</tbody></table>');
@@ -510,9 +499,7 @@
                 }
             }
 
-            if (inTable) {
-                outputLines.push('</tbody></table>');
-            }
+            if (inTable) { outputLines.push('</tbody></table>'); }
 
             htmlText = outputLines.join('\n');
 
@@ -546,9 +533,10 @@
 
             chatBox.insertBefore(messageDiv, scrollSentinel);
 
-            if (sender !== 'user') {
-                chatBox.scrollTop = chatBox.scrollHeight; 
-            }
+            // 🚀 V8.7 仅在消息添加到DOM后，调用 updateSentinelHeight 确保内容紧贴底部
+            updateSentinelHeight();
+            chatBox.scrollTop = chatBox.scrollHeight; 
+            
             return messageDiv;
         }
 
@@ -565,6 +553,11 @@
                             i++;
                             const timerId = setTimeout(type, delay);
                             typingTimerIds.push(timerId); 
+                            // 在打字机过程中保持滚动到底部，并重新计算哨兵高度
+                            if (chatBox.scrollHeight - chatBox.scrollTop - chatBox.clientHeight < 50) {
+                                chatBox.scrollTop = chatBox.scrollHeight;
+                                updateSentinelHeight();
+                            }
                         } catch (e) {
                             console.error("Typing rendering error:", e);
                             messageElement.innerHTML = renderMarkdown(rawText);
@@ -582,21 +575,15 @@
         // --- 🚀 V7.7：在标题栏显示欢迎语并定时消失 (逻辑保持不变) ---
         function showWelcomeMessage(text) {
             if (!text) return;
-
             welcomeMessageOverlay.textContent = text;
             welcomeMessageOverlay.style.display = 'block';
             welcomeMessageOverlay.classList.remove('fading'); 
-
-            // 3000毫秒（3秒）后开始淡出
             setTimeout(() => {
                 welcomeMessageOverlay.classList.add('fading');
-
-                // 动画结束后（0.5秒后）彻底隐藏
                 setTimeout(() => {
                     welcomeMessageOverlay.style.display = 'none';
                     welcomeMessageOverlay.classList.remove('fading');
-                }, 500); // 匹配 CSS 中的 animation duration 0.5s
-
+                }, 500); 
             }, 3000); 
         }
 
@@ -617,7 +604,6 @@
                     const defaultWelcome = '喂。你要问什么？快点。';
                     const welcomeText = config.welcomeMessage || defaultWelcome;
 
-                    // 调用新的函数在标题栏显示欢迎语
                     showWelcomeMessage(welcomeText); 
 
                 } else {
@@ -658,12 +644,9 @@
             if (!messageElement.classList.contains('ai-message')) {
                 return;
             }
-
             messageElement.classList.remove('bounced');
             void messageElement.offsetWidth; 
-
             messageElement.classList.add('bounced');
-
             messageElement.addEventListener('animationend', function handler() {
                 messageElement.classList.remove('bounced');
                 messageElement.removeEventListener('animationend', handler);
@@ -671,7 +654,7 @@
         }
 
 
-        // --- handleApiChat (🚀 V8.6: 移除哨兵取消逻辑) ---
+        // --- handleApiChat (🚀 V8.7: AI回复完毕后重新计算留白) ---
         async function handleApiChat(aiMessageDiv, userMessage, signal) {
 
             setTimeout(() => { aiMessageDiv.textContent = '思考中。。。'; }, 100);
@@ -694,10 +677,9 @@
                 const data = await response.json();
 
                 if (response.ok) {
-                    // 请注意：这里假设 data.candidates?.[0]?.content?.parts?.[0]?.text 是 Gemini API 的标准响应路径。
                     const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || '抱歉，AI 返回了空响应。';
 
-                    await startTyping(aiMessageDiv, aiText); 
+                    await startTyping(aiMessageDiv, aiText, 5); // 稍微放慢打字速度，让动态计算效果更明显
                     aiMessageDiv.classList.remove('ai-thinking');
 
                     triggerMessageBounce(aiMessageDiv);
@@ -721,13 +703,14 @@
                 currentAbortController = null; 
                 sendButton.disabled = false;
                 messageInput.placeholder = '向 AI 提问...';
-
-                // isSentinelActive = false; // 🚀 V8.6 修改: 保持哨兵模式开启
-                // updateSentinelHeight();   // 🚀 V8.6 修改: 不再更新，维持高度
+                
+                // 🚀 V8.7: AI 回复完成后，重新计算最终的留白高度
+                isSentinelActive = true; 
+                updateSentinelHeight();
             }
         }
 
-        // --- 核心功能函数：sendMessage (保持 V7.5 逻辑) ---
+        // --- 核心功能函数：sendMessage (🚀 V8.7 简化滚动) ---
         async function sendMessage() {
             const message = messageInput.value.trim();
             if (message === '') return;
@@ -742,16 +725,14 @@
             }
 
             const finalMessage = message; 
-
             isSentinelActive = true; 
-
+            
+            // appendMessage 会自动调用 updateSentinelHeight 和滚动到底部
             const userMessageDiv = appendMessage('user', message); 
+            
             messageInput.value = '';
             sendButton.disabled = true;
             messageInput.placeholder = 'AI 正在思考...';
-
-            updateSentinelHeight(); // 开启哨兵并更新高度
-            userMessageDiv.scrollIntoView({ block: 'start', behavior: 'smooth' }); // 将用户消息滚动到顶部
 
             currentAbortController = new AbortController();
 
@@ -777,11 +758,11 @@
         newChatButton.addEventListener('click', startNewChat);
 
         document.addEventListener('DOMContentLoaded', () => {
-             // 启动 Canvas 背景动画
             v8CanvasBackgroundScript();
-            // 获取配置
             fetchConfig();
         });
+        
+        // 窗口大小变化时，需要重新计算留白
         window.addEventListener('resize', updateSentinelHeight); 
     </script>
 </body>
