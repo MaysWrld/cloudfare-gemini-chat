@@ -85,6 +85,7 @@
     <script>
         const statusElement = document.getElementById('status');
         const form = document.getElementById('configForm');
+        const saveButton = document.querySelector('button[type="submit"]'); // 🎯 新增：获取保存按钮元素
         
         // 固定的图文功能指令，确保不被覆盖
         const IMAGE_FUNCTION_PROMPT = `
@@ -93,8 +94,6 @@
 
         /**
          * 辅助函数：将完整的 personaPrompt 剥离出用户输入的角色部分
-         * @param {string} fullPrompt - 完整的 Prompt 字符串
-         * @returns {string} - 仅包含角色指令的部分
          */
         function extractRolePrompt(fullPrompt) {
             if (!fullPrompt) return '';
@@ -130,7 +129,7 @@
                     document.getElementById('welcomeMessage').value = config.welcomeMessage || '';
                     document.getElementById('appTitle').value = config.appTitle || '';
                     
-                    // 🚀 核心：加载时，只显示用户自定义的角色指令部分
+                    // 加载时，只显示用户自定义的角色指令部分
                     const currentPrompt = config.personaPrompt || '';
                     document.getElementById('personaPrompt').value = extractRolePrompt(currentPrompt);
                     
@@ -156,21 +155,17 @@
             // 获取用户输入的角色指令
             const userRolePrompt = document.getElementById('personaPrompt').value.trim();
             
-            // 🚀 核心：将用户的角色指令和功能指令合并
-            // 合并的顺序是：[用户角色] + 换行 + [功能强制指令]
+            // 核心：将用户的角色指令和功能指令合并
             const finalPersonaPrompt = userRolePrompt 
                 ? userRolePrompt + '\n\n' + IMAGE_FUNCTION_PROMPT
-                : IMAGE_FUNCTION_PROMPT; // 如果用户没输入角色，则只使用功能指令
+                : IMAGE_FUNCTION_PROMPT; 
 
             const data = {
                 apiUrl: document.getElementById('apiUrl').value,
                 apiKey: document.getElementById('apiKey').value,
                 welcomeMessage: document.getElementById('welcomeMessage').value,
                 appTitle: document.getElementById('appTitle').value,
-                
-                // 提交合并后的最终指令
                 personaPrompt: finalPersonaPrompt, 
-                
                 modelName: document.getElementById('modelName').value,
                 temperature: document.getElementById('temperature').value 
             };
@@ -185,10 +180,26 @@
                 const result = await response.json();
 
                 if (response.ok) {
-                    // 重新加载配置，确保页面上的温度值是格式化后的
+                    // 1. 恢复其他配置并更新状态
                     loadConfig(); 
                     statusElement.className = 'alert alert-success';
                     statusElement.textContent = result.message;
+                    
+                    // 🚀 按钮反馈优化
+                    const originalButtonText = saveButton.textContent;
+                    saveButton.textContent = '保存成功';
+                    saveButton.classList.remove('btn-success');
+                    saveButton.classList.add('btn-secondary'); 
+                    saveButton.disabled = true;
+
+                    // 2. 2秒后恢复按钮状态
+                    setTimeout(() => {
+                        saveButton.textContent = originalButtonText;
+                        saveButton.classList.remove('btn-secondary');
+                        saveButton.classList.add('btn-success');
+                        saveButton.disabled = false;
+                    }, 2000); 
+                    
                 } else {
                     statusElement.className = 'alert alert-danger';
                     statusElement.textContent = `保存失败: ${result.error || response.statusText}`;
