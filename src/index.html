@@ -26,7 +26,7 @@
             --color-focus-blue: #8ab4f8;
             --color-brand-blue: #1a73e8;
             --color-brand-blue-rgb: 26, 115, 232;
-            
+
             /* 🚀 V8.4 核心修改：金色主题 */
             --color-particle: #FFD700; /* 标准金色 */
             --color-particle-line: #FFA500; /* 橙金色，连线更明显 */
@@ -50,19 +50,19 @@
                 --color-focus-blue: #5b92e5;
                 --color-brand-blue: #5b92e5;
                 --color-brand-blue-rgb: 91, 146, 229; 
-                
+
                 /* 🚀 V8.4 核心修改：金色主题 */
                 --color-particle: #FFCC00; /* 亮金色 */
                 --color-particle-line: #FFEB80; /* 淡金色连线 */
             }
         }
-        
+
         /* ================================== */
         /* === 布局和基础样式：使用颜色变量 === */
         /* ================================= */
         html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; }
         body { font-family: 'Google Sans', 'Roboto', Arial, sans-serif; background-color: var(--bg-main); display: flex; justify-content: center; align-items: center; color: var(--text-main); }
-        
+
         /* 🚀 V8.0 新增：Canvas 背景样式 */
         #v8Canvas {
             position: fixed; 
@@ -90,7 +90,7 @@
         }
 
         @media (min-width: 961px) { .chat-container { height: 90vh; border-radius: 28px; } }
-        
+
         /* 头部样式：使用高透明度背景 */
         .header { 
             padding: 16px 24px; 
@@ -105,7 +105,7 @@
             flex-shrink: 0; 
             position: relative;
         }
-        
+
         /* 🚀 V7.8 标题呼吸动画 (保持不变) */
         /* 标题文字样式 */
         .header-title { 
@@ -113,7 +113,7 @@
             animation: breathe-text 2s infinite alternate ease-in-out; 
             transition: color 0.2s;
         }
-        
+
         /* 🚀 V7.8 新增：标题文字呼吸动画 (保持不变) */
         @keyframes breathe-text {
             0% { 
@@ -129,9 +129,9 @@
                 text-shadow: 0 0 1px rgba(var(--color-brand-blue-rgb), 0.2); 
             }
         }
-        
+
         .header-icon { font-size: 1em; } 
-        
+
         /* 🚀 欢迎语样式：用于调节字体大小 */
         .welcome-overlay {
             position: absolute;
@@ -192,7 +192,7 @@
             scroll-behavior: smooth; 
             -webkit-overflow-scrolling: touch; 
         }
-        
+
         /* 消息样式 (保持不变) */
         .message { 
             padding: 12px 18px; 
@@ -256,13 +256,13 @@
 
         /* 输入区域样式：使用高透明度背景 */
         .input-area { display: flex; padding: 16px 24px; border-top: 1px solid var(--border-main); background-color: var(--bg-card); /* 🚀 V8.3：更高透明度 */ align-items: center; gap: 10px; flex-shrink: 0; }
-        
+
         #messageInput { flex-grow: 1; padding: 12px 18px; border: 1px solid var(--border-main); border-radius: 24px; font-size: 1em; outline: none; transition: border-color 0.2s, box-shadow 0.2s; background-color: var(--bg-input); color: var(--text-main); }
         #messageInput:focus { border-color: var(--color-focus-blue); box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.2); background-color: var(--bg-card); }
         #sendButton { padding: 12px 20px; background-color: var(--color-brand-blue); color: white; border: none; border-radius: 24px; cursor: pointer; font-size: 1em; transition: background-color 0.3s, box-shadow 0.3s; display: flex; align-items: center; justify-content: center; }
         #sendButton:hover { background-color: #1565c0; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); }
         #sendButton:disabled { background-color: #dadce0; cursor: not-allowed; }
-        
+
         /* V5.12 动态哨兵 CSS (保持不变) */
         #scrollSentinel {
             min-height: 1px;
@@ -298,10 +298,10 @@
         const newChatButton = document.getElementById('newChatIcon'); 
         const scrollSentinel = document.getElementById('scrollSentinel');
         const welcomeMessageOverlay = document.getElementById('welcomeMessageOverlay');
-        
+
         const pageTitleElement = document.getElementById('pageTitle'); 
         const appTitleDisplayElement = document.getElementById('appTitleDisplay'); 
-        
+
         // --- 【全局状态】 ---
         let currentAbortController = null; 
         let typingTimerIds = []; 
@@ -335,7 +335,7 @@
                     this.x = Math.random() * width;
                     this.y = Math.random() * height;
                     this.radius = Math.random() * 1.5 + 0.5;
-                    
+
                     // 🚀 V8.5 核心修改：提高速度范围到 -0.75 到 0.75
                     this.vx = Math.random() * 1.5 - 0.75; 
                     this.vy = Math.random() * 1.5 - 0.75;
@@ -423,13 +423,13 @@
                 resizeCanvas();
                 initParticles();
             });
-            
+
             // 启动动画
             animate();
         }
         // 🚀 V8.0 Canvas 动画脚本函数结束
-        
-        
+
+
         // --- 辅助函数：动态更新哨兵高度 (保持 V7.5 逻辑) ---
         function updateSentinelHeight() {
             if (isSentinelActive) {
@@ -445,7 +445,7 @@
             typingTimerIds.forEach(id => clearTimeout(id));
             typingTimerIds = [];
         }
-        
+
         // --- 辅助函数：Markdown 渲染 (保持不变) ---
         function renderMarkdown(text) {
             let htmlText = text;
@@ -465,7 +465,7 @@
 
             for (let i = 0; i < lines.length; i++) {
                 const line = lines[i].trim();
-                
+
                 const isSeparator = line.match(/^\|[ \t]*([: \-]*?\|)+[ \t]*$/);
 
                 if (!inTable && line.match(/^\|.*?\|$/) && i + 1 < lines.length && lines[i+1].trim().match(/^\|[ \t]*([: \-]*?\|)+[ \t]*$/)) {
@@ -473,7 +473,7 @@
                     outputLines.push('<table><thead><tr>');
                     const headers = headerLine.split('|').slice(1, -1);
                     headerCells = headers.length;
-                    
+
                     headers.forEach(header => {
                         outputLines.push(`<th>${header.trim()}</th>`);
                     });
@@ -484,7 +484,7 @@
                     continue;
                 } else if (inTable && line.match(/^\|.*?\|$/)) {
                     const cells = line.split('|').slice(1, -1);
-                    
+
                     if (cells.length === headerCells) {
                         outputLines.push('<tr>');
                         cells.forEach(cell => {
@@ -509,7 +509,7 @@
                     outputLines.push(line);
                 }
             }
-            
+
             if (inTable) {
                 outputLines.push('</tbody></table>');
             }
@@ -522,10 +522,10 @@
             htmlText = htmlText.replace(/^\* (.*$)/gim, '<ul><li>$1</li></ul>');
             htmlText = htmlText.replace(/<\/li>\n<ul>/gim, '</li>'); 
             htmlText = htmlText.replace(/<\/ul>(\n<ul>)?/gim, '</ul>');
-            
+
             htmlText = htmlText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
             htmlText = htmlText.replace(/\*(.*?)\*/g, '<em>$1</em>');
-            
+
             // 4. 替换最后的换行符为 <br>
             return htmlText.replace(/\n/g, '<br>');
         }
@@ -535,7 +535,7 @@
         function appendMessage(sender, text) {
             const messageDiv = document.createElement('div');
             messageDiv.classList.add('message');
-            
+
             if (sender === 'user') {
                 messageDiv.classList.add('user-message');
                 messageDiv.textContent = text; 
@@ -543,15 +543,15 @@
                 messageDiv.classList.add('system-message');
                 messageDiv.innerHTML = text;
             }
-            
+
             chatBox.insertBefore(messageDiv, scrollSentinel);
-            
+
             if (sender !== 'user') {
                 chatBox.scrollTop = chatBox.scrollHeight; 
             }
             return messageDiv;
         }
-        
+
         // --- 打字机效果函数 (保持不变) ---
         function startTyping(messageElement, rawText, delay = 1) { 
             return new Promise(resolve => {
@@ -578,7 +578,7 @@
                 type();
             });
         }
-        
+
         // --- 🚀 V7.7：在标题栏显示欢迎语并定时消失 (逻辑保持不变) ---
         function showWelcomeMessage(text) {
             if (!text) return;
@@ -590,7 +590,7 @@
             // 3000毫秒（3秒）后开始淡出
             setTimeout(() => {
                 welcomeMessageOverlay.classList.add('fading');
-                
+
                 // 动画结束后（0.5秒后）彻底隐藏
                 setTimeout(() => {
                     welcomeMessageOverlay.style.display = 'none';
@@ -605,10 +605,10 @@
             updateSentinelHeight();
             try {
                 const response = await fetch('/api/admin'); 
-                
+
                 if (response.ok) {
                     const config = await response.json();
-                    
+
                     const defaultAppTitle = 'AI 助手';
                     const appTitle = config.appTitle || defaultAppTitle;
                     pageTitleElement.textContent = appTitle;
@@ -616,10 +616,10 @@
 
                     const defaultWelcome = '喂。你要问什么？快点。';
                     const welcomeText = config.welcomeMessage || defaultWelcome;
-                    
+
                     // 调用新的函数在标题栏显示欢迎语
                     showWelcomeMessage(welcomeText); 
-                    
+
                 } else {
                     appendMessage('ai', '呵，又来了？连个配置都连不上。');
                 }
@@ -627,7 +627,7 @@
                 appendMessage('system', '网络错误，懒得跟你解释。');
             }
         }
-        
+
         // --- startNewChat (保持不变) ---
         async function startNewChat() {
             if (!confirm("确定要开启新的聊天吗？当前对话记录将被清空。")) {
@@ -641,7 +641,7 @@
                 }
 
                 const response = await fetch('/api/new_chat', { method: 'POST' });
-                
+
                 if (response.ok) {
                     window.location.reload();
                 } else {
@@ -658,12 +658,12 @@
             if (!messageElement.classList.contains('ai-message')) {
                 return;
             }
-            
+
             messageElement.classList.remove('bounced');
             void messageElement.offsetWidth; 
 
             messageElement.classList.add('bounced');
-            
+
             messageElement.addEventListener('animationend', function handler() {
                 messageElement.classList.remove('bounced');
                 messageElement.removeEventListener('animationend', handler);
@@ -671,11 +671,11 @@
         }
 
 
-        // --- handleApiChat (保持 V7.5 逻辑) ---
+        // --- handleApiChat (🚀 V8.6: 移除哨兵取消逻辑) ---
         async function handleApiChat(aiMessageDiv, userMessage, signal) {
-            
+
             setTimeout(() => { aiMessageDiv.textContent = '思考中。。。'; }, 100);
-            
+
             try {
                 const response = await fetch('/api/chat', {
                     method: 'POST',
@@ -690,20 +690,20 @@
                     aiMessageDiv.remove(); 
                     return; 
                 }
-                
+
                 const data = await response.json();
-                
+
                 if (response.ok) {
                     const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || '抱歉，AI 返回了空响应。';
-                    
+
                     await startTyping(aiMessageDiv, aiText); 
                     aiMessageDiv.classList.remove('ai-thinking');
-                    
+
                     triggerMessageBounce(aiMessageDiv);
-                    
+
                 } else {
                     const errorMessage = data.error ? `AI 接口错误：${data.error.message || data.error}` : `请求失败，状态码：${response.status}`;
-                    
+
                     aiMessageDiv.classList.remove('ai-thinking');
                     aiMessageDiv.classList.remove('ai-message'); 
                     aiMessageDiv.classList.add('system-message');
@@ -720,9 +720,9 @@
                 currentAbortController = null; 
                 sendButton.disabled = false;
                 messageInput.placeholder = '向 AI 提问...';
-                
-                isSentinelActive = false; 
-                updateSentinelHeight();
+
+                // isSentinelActive = false; // 🚀 V8.6 修改: 保持哨兵模式开启
+                // updateSentinelHeight();   // 🚀 V8.6 修改: 不再更新，维持高度
             }
         }
 
@@ -741,31 +741,31 @@
             }
 
             const finalMessage = message; 
-            
+
             isSentinelActive = true; 
-            
+
             const userMessageDiv = appendMessage('user', message); 
             messageInput.value = '';
             sendButton.disabled = true;
             messageInput.placeholder = 'AI 正在思考...';
-            
+
             updateSentinelHeight();
             userMessageDiv.scrollIntoView({ block: 'start', behavior: 'smooth' });
-            
+
             currentAbortController = new AbortController();
 
             setTimeout(() => {
                 const aiMessageDiv = document.createElement('div');
                 aiMessageDiv.classList.add('message', 'ai-message', 'ai-thinking'); 
                 chatBox.insertBefore(aiMessageDiv, scrollSentinel); 
-                
+
                 handleApiChat(aiMessageDiv, finalMessage, currentAbortController.signal);
             }, 50);
         }
 
         // --- 事件监听器 (保持不变) ---
         sendButton.addEventListener('click', sendMessage);
-        
+
         messageInput.addEventListener('keydown', function(event) {
             if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
                 event.preventDefault(); 
