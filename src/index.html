@@ -4,15 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="light dark"> 
-    <title id="pageTitle">AI 助手</title> <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2d000/svg' viewBox='0 0 100 100'><text y='-.1em' x='-.05em' font-size='90'>✨</text></svg>">
+    <title id="pageTitle">  </title> <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2d000/svg' viewBox='0 0 100 100'><text y='-.1em' x='-.05em' font-size='90'>✨</text></svg>">
     <style>
         /* =================================================== */
-        /* === 颜色变量定义：深浅模式切换的核心 (V8.4 金色主题) === */
+        /* === 颜色变量定义：深浅模式切换的核心 (V8.6 渐变标题) === */
         /* =================================================== */
         :root {
             /* Light Mode Variables */
             --bg-main: #f0f4f9;
-            --bg-card: rgba(255, 255, 255, 0.7); /* 🚀 V8.3：更高透明度 (0.7) */
+            --bg-card: rgba(255, 255, 255, 0.7); /* V8.3：更高透明度 (0.7) */
             --bg-input: #f8f9fa;
             --text-main: #3c4043;
             --text-header: #202124;
@@ -27,16 +27,22 @@
             --color-brand-blue: #1a73e8;
             --color-brand-blue-rgb: 26, 115, 232;
 
-            /* 🚀 V8.4 核心修改：金色主题 */
+            /* 🚀 V8.4/V8.6 核心修改：金色主题 & 渐变标题新增 */
             --color-particle: #FFD700; /* 标准金色 */
             --color-particle-line: #FFA500; /* 橙金色，连线更明显 */
+
+            /* 🆕 Google 渐变色变量，仅用于标题 */
+            --google-blue: #4285f4;
+            --google-red: #ea4335;
+            --google-yellow: #fbbc04;
+            --google-green: #34a853;
         }
 
         /* 深色模式：根据设备设置覆盖颜色变量 */
         @media (prefers-color-scheme: dark) {
             :root {
                 --bg-main: #121212;
-                --bg-card: rgba(32, 32, 32, 0.7); /* 🚀 V8.3：更高透明度 (0.7) */
+                --bg-card: rgba(32, 32, 32, 0.7); /* V8.3：更高透明度 (0.7) */
                 --bg-input: #303030;
                 --text-main: #e0e0e0;
                 --text-header: #f5f5f5;
@@ -91,48 +97,46 @@
 
         @media (min-width: 961px) { .chat-container { height: 90vh; border-radius: 28px; } }
 
-        /* 头部样式：使用高透明度背景 */
+        /* 头部样式：【关键修改】移除 justify-content: space-between */
         .header { 
             padding: 16px 24px; 
-            background-color: var(--bg-card); /* 🚀 V8.3：更高透明度 */
+            background-color: var(--bg-card); 
             border-bottom: 1px solid var(--border-main); 
             color: var(--text-header); 
-            font-size: 1.5em; 
+            font-size: 1.2em; 
             font-weight: 500; 
             display: flex; 
             align-items: center; 
-            justify-content: space-between; 
+            /* 保持标题和图标在左侧 */
+            justify-content: flex-start; 
             flex-shrink: 0; 
-            position: relative;
+            position: relative; /* 必须设置 relative，以便子元素 absolute 定位 */
         }
 
-        /* 🚀 V7.8 标题呼吸动画 */
-        /* 标题文字样式 */
+        /* 🚀 V8.6 标题渐变色样式 */
         .header-title { 
-            font-weight: 500; 
-            animation: breathe-text 2s infinite alternate ease-in-out; 
+            font-weight: 700; 
+            font-size: 1.2em; 
             transition: color 0.2s;
-        }
-
-        /* 🚀 V7.8 新增：标题文字呼吸动画 */
-        @keyframes breathe-text {
-            0% { 
-                opacity: 1;
-                text-shadow: 0 0 1px rgba(var(--color-brand-blue-rgb), 0.2); 
-            }
-            50% { 
-                opacity: 0.95; 
-                text-shadow: 0 0 6px rgba(var(--color-brand-blue-rgb), 0.7); 
-            }
-            100% {
-                opacity: 1;
-                text-shadow: 0 0 1px rgba(var(--color-brand-blue-rgb), 0.2); 
-            }
+            background: linear-gradient(
+                to right,
+                var(--google-blue), 
+                var(--google-red), 
+                var(--google-yellow), 
+                var(--google-green) 
+            );
+            -webkit-background-clip: text; 
+            background-clip: text;
+            -webkit-text-fill-color: transparent; 
+            color: transparent; 
+            animation: none; 
+            text-shadow: none;
+            margin-right: 8px; /* 标题和图标间距 */
         }
 
         .header-icon { font-size: 1em; } 
 
-        /* 🚀 欢迎语样式：用于调节字体大小 */
+        /* 🚀 欢迎语样式 */
         .welcome-overlay {
             position: absolute;
             left: 50%;
@@ -158,29 +162,54 @@
             animation: fade-out 0.5s forwards;
         }
 
+        /* ============================================= */
+        /* >>>>>>> 标题栏内的新聊天按钮样式 (关键修改) <<<<<<< */
+        /* ============================================= */
+        #newChatIcon {
+            position: absolute; /* 相对于 .header 定位 */
+            right: 15px; /* 距离右侧 15px */
+            top: 50%; /* 距离顶部 50% */
+            transform: translateY(-50%); /* 向上移动自身高度的 50% 实现垂直居中 */
 
-        /* V6.2 精简新聊天图标按钮样式 */
-        .input-area .new-chat-icon-button {
-            background: none;
-            color: var(--text-main);
-            border: 1px solid var(--border-main);
+            /* 样式和透明度调整 */
+            background: var(--color-brand-blue); 
+            color: white; 
+            border: none;
             width: 44px; 
-            height: 44px; 
+            height: 44px;
             border-radius: 50%; 
             cursor: pointer;
             font-size: 1.5em; 
-            font-weight: 300; 
-            transition: background-color 0.2s, border-color 0.2s;
-            flex-shrink: 0;
+            font-weight: 500; 
+            z-index: 10; 
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: background-color 0.2s, box-shadow 0.2s, opacity 0.2s;
             display: flex;
             align-items: center;
             justify-content: center;
+            
+            /* 【核心要求】透明度调整为 30% */
+            opacity: 0.3; 
         }
-        .input-area .new-chat-icon-button:hover {
-            background-color: var(--color-ai);
-            border-color: var(--color-focus-blue);
+        #newChatIcon:hover {
+            background-color: var(--color-brand-blue); 
+            transform: translateY(-50%) scale(1.05);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            /* 鼠标悬停时，透明度恢复 */
+            opacity: 1; 
         }
-        /* 按钮样式结束 */
+
+        /* 针对小屏幕的调整：按钮尺寸略微缩小，位置不变 */
+        @media (max-width: 600px) {
+            #newChatIcon {
+                width: 38px; 
+                height: 38px;
+                font-size: 1.3em; 
+                right: 10px; /* 距离右侧更近 */
+            }
+        }
+        /* >>>>>>>>>>>>>> 标题栏内按钮样式结束 <<<<<<<<<<<<<< */
+
 
         .chat-box { 
             flex-grow: 1; 
@@ -193,7 +222,7 @@
             -webkit-overflow-scrolling: touch; 
         }
 
-        /* 消息样式 */
+        /* 消息样式 (保持不变) */
         .message { 
             padding: 12px 18px; 
             border-radius: 20px; 
@@ -208,14 +237,14 @@
         .ai-message { align-self: flex-start; background-color: var(--color-ai); }
         .system-message { align-self: center; background-color: var(--color-system-bg); color: var(--color-system-text); font-size: 0.85em; text-align: center; padding: 8px 12px; border-radius: 12px; max-width: 60%; }
 
-        /* --- 呼吸动画效果 --- */
+        /* --- 呼吸动画效果 (保持不变) --- */
         @keyframes breathe-border {
             0%, 100% { box-shadow: 0 0 0 0px rgba(var(--color-brand-blue-rgb), 0.5); }
             50% { box-shadow: 0 0 0 3px rgba(var(--color-brand-blue-rgb), 0.8); }
         }
         .ai-thinking { border: 1px solid var(--color-brand-blue); box-sizing: border-box; animation: breathe-border 1.5s infinite ease-in-out; padding: 11px 17px; }
 
-        /* === 回弹动画效果 === */
+        /* === 回弹动画效果 (保持不变) === */
         @keyframes bounce-message {
             0% { transform: scale(1); box-shadow: none; }
             20% { transform: scale(1.01); }
@@ -227,14 +256,14 @@
             animation: bounce-message 0.8s ease-out 1; 
         }
 
-        /* --- Markdown 样式 --- */
+        /* --- Markdown 样式 (保持不变) --- */
         .ai-message pre { background-color: var(--color-code-bg); padding: 10px; border-radius: 8px; overflow-x: auto; margin-top: 10px; font-family: Consolas, Monaco, 'Courier New', monospace; font-size: 0.9em; white-space: pre-wrap; }
         .ai-message pre code { display: block; padding-left: 0; }
         .ai-message h2 { font-size: 1.2em; font-weight: 600; margin-top: 15px; margin-bottom: 5px; color: var(--color-brand-blue); }
         .ai-message ul { padding-left: 20px; margin-top: 5px; margin-bottom: 5px; list-style: disc; }
         .ai-message strong { font-weight: 700; }
 
-        /* 🚀 V6.5 新增：Markdown 表格样式 */
+        /* 🚀 V6.5 新增：Markdown 表格样式 (保持不变) */
         .ai-message table {
             border-collapse: collapse; 
             margin: 15px 0;
@@ -255,7 +284,15 @@
         }
 
         /* 输入区域样式：使用高透明度背景 */
-        .input-area { display: flex; padding: 16px 24px; border-top: 1px solid var(--border-main); background-color: var(--bg-card); /* 🚀 V8.3：更高透明度 */ align-items: center; gap: 10px; flex-shrink: 0; }
+        .input-area { 
+            display: flex; 
+            padding: 16px 24px; 
+            border-top: 1px solid var(--border-main); 
+            background-color: var(--bg-card); 
+            align-items: center; 
+            gap: 10px; 
+            flex-shrink: 0; 
+        }
 
         #messageInput { flex-grow: 1; padding: 12px 18px; border: 1px solid var(--border-main); border-radius: 24px; font-size: 1em; outline: none; transition: border-color 0.2s, box-shadow 0.2s; background-color: var(--bg-input); color: var(--text-main); }
         #messageInput:focus { border-color: var(--color-focus-blue); box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.2); background-color: var(--bg-card); }
@@ -269,6 +306,17 @@
             flex-shrink: 0;
             visibility: hidden; 
         }
+
+        /* 针对小屏幕调整输入区域，使其更紧凑 */
+        @media (max-width: 600px) {
+            .input-area {
+                padding: 12px 16px; 
+                gap: 8px; 
+            }
+            #messageInput, #sendButton {
+                padding: 10px 16px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -280,17 +328,17 @@
             <span class="header-title" id="appTitleDisplay">AI 助手</span> 
             <div id="welcomeMessageOverlay" class="welcome-overlay" style="display: none;"></div> 
             <span class="header-icon">✨</span>
+            <button id="newChatIcon">+</button> 
         </div>
         <div class="chat-box" id="chatBox">
             <div id="scrollSentinel"></div>
         </div>
         <div class="input-area">
-            <button id="newChatIcon" class="new-chat-icon-button">+</button>
             <input type="text" id="messageInput" placeholder="向 AI 提问..." autofocus>
             <button id="sendButton">发送</button>
         </div>
     </div>
-
+    
     <script>
         const chatBox = document.getElementById('chatBox');
         const messageInput = document.getElementById('messageInput');
@@ -317,6 +365,7 @@
             let width, height;
             let particles = [];
             const PARTICLE_COUNT = 70;
+            let animationFrameId = null;
 
             // 获取 CSS 变量
             function getCssVariable(name) {
@@ -387,7 +436,7 @@
                             // 距离越远，透明度越低
                             const opacity = 1 - (distance / maxDistance);
                             ctx.strokeStyle = lineColor;
-                            ctx.globalAlpha = opacity * 0.8; // 保持较高的连线不透明度
+                            ctx.globalAlpha = opacity * 0.8; 
                             ctx.lineWidth = 1;
                             ctx.beginPath();
                             ctx.moveTo(p1.x, p1.y);
@@ -401,36 +450,40 @@
 
             // 主循环
             function animate() {
-                // 清空画布
                 ctx.clearRect(0, 0, width, height); 
-
-                // 绘制连线
                 connectParticles();
-
-                // 更新和绘制粒子
                 particles.forEach(p => {
                     p.update();
                     p.draw();
                 });
 
-                requestAnimationFrame(animate);
+                animationFrameId = requestAnimationFrame(animate);
+            }
+            
+            // 启动/停止控制，确保不重复运行
+            function start() {
+                if (!animationFrameId) {
+                    resizeCanvas();
+                    initParticles();
+                    animate();
+                }
             }
 
-            // 初始化
-            resizeCanvas();
-            initParticles();
-            window.addEventListener('resize', () => {
-                resizeCanvas();
-                initParticles();
-            });
-
-            // 启动动画
-            animate();
+            // 暴露启动函数
+            return {
+                start: start,
+                resize: () => {
+                    resizeCanvas();
+                    initParticles();
+                }
+            };
         }
+        const canvasManager = v8CanvasBackgroundScript();
+
         // 🚀 V8.0 Canvas 动画脚本函数结束
 
 
-        // --- 辅助函数：动态更新哨兵高度 (保持 V7.5 逻辑) ---
+        // --- 辅助函数：动态更新哨兵高度 (保持不变) ---
         function updateSentinelHeight() {
             if (isSentinelActive) {
                 const chatBoxHeight = chatBox.clientHeight;
@@ -595,12 +648,12 @@
                 setTimeout(() => {
                     welcomeMessageOverlay.style.display = 'none';
                     welcomeMessageOverlay.classList.remove('fading');
-                }, 500); // 匹配 CSS 中的 animation duration 0.5s
+                }, 500); 
 
             }, 3000); 
         }
 
-        // --- fetchConfig (保持 V7.7 逻辑) ---
+        // --- fetchConfig (保持不变) ---
         async function fetchConfig() {
             updateSentinelHeight();
             try {
@@ -617,7 +670,6 @@
                     const defaultWelcome = '喂。你要问什么？快点。';
                     const welcomeText = config.welcomeMessage || defaultWelcome;
 
-                    // 调用新的函数在标题栏显示欢迎语
                     showWelcomeMessage(welcomeText); 
 
                 } else {
@@ -671,7 +723,7 @@
         }
 
 
-        // --- handleApiChat (🚀 V8.6: 移除哨兵取消逻辑) ---
+        // --- handleApiChat (保持不变) ---
         async function handleApiChat(aiMessageDiv, userMessage, signal) {
 
             setTimeout(() => { aiMessageDiv.textContent = '思考中。。。'; }, 100);
@@ -694,7 +746,6 @@
                 const data = await response.json();
 
                 if (response.ok) {
-                    // 请注意：这里假设 data.candidates?.[0]?.content?.parts?.[0]?.text 是 Gemini API 的标准响应路径。
                     const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || '抱歉，AI 返回了空响应。';
 
                     await startTyping(aiMessageDiv, aiText); 
@@ -721,13 +772,10 @@
                 currentAbortController = null; 
                 sendButton.disabled = false;
                 messageInput.placeholder = '向 AI 提问...';
-
-                // isSentinelActive = false; // 🚀 V8.6 修改: 保持哨兵模式开启
-                // updateSentinelHeight();   // 🚀 V8.6 修改: 不再更新，维持高度
             }
         }
 
-        // --- 核心功能函数：sendMessage (保持 V7.5 逻辑) ---
+        // --- 核心功能函数：sendMessage (保持不变) ---
         async function sendMessage() {
             const message = messageInput.value.trim();
             if (message === '') return;
@@ -750,8 +798,8 @@
             sendButton.disabled = true;
             messageInput.placeholder = 'AI 正在思考...';
 
-            updateSentinelHeight(); // 开启哨兵并更新高度
-            userMessageDiv.scrollIntoView({ block: 'start', behavior: 'smooth' }); // 将用户消息滚动到顶部
+            updateSentinelHeight(); 
+            userMessageDiv.scrollIntoView({ block: 'start', behavior: 'smooth' }); 
 
             currentAbortController = new AbortController();
 
@@ -777,12 +825,17 @@
         newChatButton.addEventListener('click', startNewChat);
 
         document.addEventListener('DOMContentLoaded', () => {
-             // 启动 Canvas 背景动画
-            v8CanvasBackgroundScript();
+            // 启动 Canvas 背景动画
+            canvasManager.start();
             // 获取配置
             fetchConfig();
         });
-        window.addEventListener('resize', updateSentinelHeight); 
+        
+        // 调整 window resize 监听器
+        window.addEventListener('resize', () => {
+            canvasManager.resize(); 
+            updateSentinelHeight(); 
+        });
     </script>
 </body>
 </html>
